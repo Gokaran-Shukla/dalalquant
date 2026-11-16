@@ -92,5 +92,6 @@ function computeAll(){
  for(const s of S.uni){const m=M[s.sym];if(!m)continue;valuation(s,m,sec[s.sector]);scoreIt(s,m,sec[s.sector])}
  S.M=M;
  try{if(S.al&&S.al.rules.length)setTimeout(runAlerts,0)}catch(e){}
+ for(const f of AFTER_COMPUTE){try{f()}catch(e){console.warn(e)}}
 }
 function reScore(){for(const s of S.uni){const m=S.M[s.sym];if(m)scoreIt(s,m,S.SEC[s.sector])}}

@@ -3,6 +3,7 @@
 function fillDatalist(){$('#symlist').innerHTML=S.uni.map(s=>`<option value="${esc(s.sym)}">${esc(s.name)}</option>`).join('')}
 function recompute(){S._rm=null;S.inst.bl=null;computeAll();updateMode();render()}
 document.addEventListener('click',e=>{const t=e.target;const tab=t.closest('[data-tab]');if(tab){e.preventDefault();go(tab.dataset.tab);return}
+ for(const h of EXTRA_CLICK)if(h(t,e))return;
  const st=t.closest('[data-act="star"]');if(st){e.stopPropagation();const s=st.dataset.sym;S.watch=S.watch.includes(s)?S.watch.filter(x=>x!==s):[...S.watch,s];LS.set('dq_watch',S.watch);render();return}
  const op=t.closest('[data-open]');if(op&&!t.closest('input,select,button,a')){closeModal();openSym(op.dataset.open);return}
  const ix=t.closest('[data-idx]');if(ix){S.rk.index=ix.dataset.idx;S.rk.sector='ALL';go('rankings');return}
@@ -119,9 +120,9 @@ document.addEventListener('click',e=>{const t=e.target;const tab=t.closest('[dat
   cfgSave(){$$('[data-cfg]').forEach(i=>S.cfg[i.dataset.cfg]=+i.value);$$('[data-ch]').forEach(i=>S.cfg.ch[i.dataset.ch]=+i.value);$$('[data-tx]').forEach(i=>S.cfg.tax[i.dataset.tx]=+i.value);$$('[data-lot]').forEach(i=>S.cfg.lots[i.dataset.lot]=+i.value);saveCfg();recompute();toast('Settings saved')},
   cfgReset(){S.cfg=JSON.parse(JSON.stringify(DEF_CFG));saveCfg();recompute()},
  };
- if(acts[act])acts[act]();
+ const fx=acts[act]||EXTRA_ACTS[act];if(fx)fx(a);
 });
-document.addEventListener('change',e=>{const t=e.target;
+document.addEventListener('change',e=>{const t=e.target;for(const h of EXTRA_CHANGE)if(h(t,e))return;
  if(t.id==='rkMkt'){S.rk.mkt=t.value;renderRankings()}else if(t.id==='rkCap'){S.rk.cap=t.value;renderRankings()}else if(t.id==='rkIdx'){S.rk.index=t.value;renderRankings()}else if(t.id==='rkSec'){S.rk.sector=t.value;renderRankings()}else if(t.id==='rkWatch'){S.rk.watch=t.checked;renderRankings()}
  else if(t.dataset.rkf){S.rk.f[t.dataset.rkf]=t.type==='checkbox'?t.checked:t.value;renderRankings()}
  else if(t.dataset.w){S.cfg.w[t.dataset.w]=+t.value;saveCfg();reScore();renderRankings()}

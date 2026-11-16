@@ -3,6 +3,7 @@
    DalalQuant — single-file Indian markets terminal
    Data sources (per symbol, shown as badges): SIM (simulated demo), CSV (imported), LIVE (broker bridge)
    ========================================================================== */
+const EXTRA_ACTS={},EXTRA_CHANGE=[],EXTRA_CLICK=[],RENDERERS={},AFTER_COMPUTE=[];
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const clamp=(x,a=0,b=100)=>Math.max(a,Math.min(b,x));
 const r2=x=>Math.round(x*100)/100;
