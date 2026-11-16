@@ -1412,7 +1412,7 @@ const POOLS=['Large','Mid','Small'];
 function capClass(sym){const s=S.bySym[sym];if(!s||s.mkt!=='IN')return null;
  // With real fundamentals for most stocks, rank by market cap (SEBI/AMFI: 1-100 large, 101-250 mid, 251+ small).
  const ind=S.uni.filter(x=>x.mkt==='IN'&&S.M[x.sym]&&S.M[x.sym].mcap);const real=ind.filter(x=>S.D[x.sym].src.f!=='sim').length;
- if(real>ind.length*0.8){if(!S._capRank||S._capRankV!==S.M){S._capRank=new Map([...ind].sort((a,b)=>S.M[b.sym].mcap-S.M[a.sym].mcap).map((x,i)=>[x.sym,i+1]));S._capRankV=S.M}const r=S._capRank.get(sym);return r==null?null:r<=100?'Large':r<=250?'Mid':'Small'}
+ if(real>ind.length*0.8&&ind.length>=300){if(!S._capRank||S._capRankV!==S.M){S._capRank=new Map([...ind].sort((a,b)=>S.M[b.sym].mcap-S.M[a.sym].mcap).map((x,i)=>[x.sym,i+1]));S._capRankV=S.M}const r=S._capRank.get(sym);return r==null?null:r<=100?'Large':r<=250?'Mid':'Small'}
  if(has(s,'5')||has(s,'N'))return 'Large';if(has(s,'M'))return 'Mid';if(has(s,'X'))return 'Small';return 'Small'}
 function poolStats(pool){const ms=S.uni.filter(s=>capClass(s.sym)===pool).map(s=>S.M[s.sym]).filter(Boolean);if(!ms.length)return null;const md=k=>median(ms.map(m=>m[k]));const av=k=>mean(ms.map(m=>m[k]).filter(v=>v!=null&&isFinite(v)));
  const proj=ms.map(m=>projections(m)).filter(Boolean).map(p=>p.sc[1].cagr);
@@ -1424,7 +1424,7 @@ function enterList(ms,k=6){return ms.filter(m=>!m.hardExit&&(m.verdict==='BUY ZO
 function exitList(ms,k=6){return ms.filter(m=>m.verdict==='EXIT').sort((a,b)=>((b.hardExit?20:0)-b.score)-((a.hardExit?20:0)-a.score)).slice(0,k)}
 function renderCap(){
  const el=$('#tab-cap');const P=S.cap.pool;const st={};POOLS.forEach(p=>st[p]=poolStats(p));const T=st[P];
- const rankMode=S.uni.filter(x=>x.mkt==='IN'&&S.D[x.sym].src.f!=='sim').length>S.uni.filter(x=>x.mkt==='IN').length*0.8;
+ const _in=S.uni.filter(x=>x.mkt==='IN');const rankMode=_in.length>=300&&_in.filter(x=>S.D[x.sym].src.f!=='sim').length>_in.length*0.8;
  if(!T){el.innerHTML='<div class="card">No stocks in this pool.</div>';return}
  const best=POOLS.filter(p=>st[p]).sort((a,b)=>((st[b].score||0)+(st[b].ups||0)*40)-((st[a].score||0)+(st[a].ups||0)*40))[0];
  const pol=POLICIES.map(p=>({p,hits:p.syms.filter(x=>capClass(x)===P).map(x=>S.M[x]).filter(Boolean)})).filter(x=>x.hits.length);
