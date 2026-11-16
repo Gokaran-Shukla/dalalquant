@@ -36,5 +36,30 @@
     "access_token": ""
   },
   "anthropic_api_key": "",
-  "anthropic_model": "claude-sonnet-5-5"
+  "anthropic_model": "claude-sonnet-5-5",
+  "notify": {
+    "telegram": {
+      "bot_token": "",
+      "chat_id": ""
+    },
+    "email": {
+      "smtp_host": "smtp.gmail.com",
+      "smtp_port": 587,
+      "user": "",
+      "password": "",
+      "to": ""
+    },
+    "whatsapp": {
+      "callmebot_phone": "",
+      "callmebot_apikey": ""
+    }
+  },
+  "brief_time": "08:45",
+  "scheduler": true,
+  "alert_poll_seconds": 180,
+  "watchlist": [
+    "RELIANCE",
+    "HDFCBANK",
+    "INFY"
+  ]
 }

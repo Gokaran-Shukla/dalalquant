@@ -719,6 +719,92 @@ def funds(p: Provider = Depends(provider)):
     return {"funds": p.funds()}
 
 
+# ---- notifications, server-side alerts, morning brief -------------------------
+class NotifyIn(BaseModel):
+    title: str
+    text: str
+    channels: list[str] | None = None
+
+
+@app.post("/notify", dependencies=[Depends(auth)])
+def notify_ep(n: NotifyIn):
+    import notify
+    return {"result": notify.send(cfg, n.title, n.text, n.channels)}
+
+
+@app.get("/alerts", dependencies=[Depends(auth)])
+def alerts_get():
+    import notify
+    return {"rules": notify.load_rules()}
+
+
+@app.post("/alerts", dependencies=[Depends(auth)])
+async def alerts_set(request: Request):
+    import notify
+    body = await request.json()
+    notify.save_rules(body.get("rules", []))
+    return {"saved": len(body.get("rules", []))}
+
+
+HI_WORDS = ("fed", "rbi", "repo", "inflation", "cpi", "crude", "opec", "war", "tariff", "sanction", "budget", "gdp", "rate cut", "rate hike", "fii")
+
+
+def build_brief() -> tuple[str, str]:
+    """Plain-text pre-market brief from Yahoo quotes + news headlines (no broker needed)."""
+    lines = []
+    try:
+        y = YahooProvider()
+        q = y.quote(["NIFTY 50", "NIFTY BANK", "SENSEX", "INDIA VIX"])
+        for k, v in q.items():
+            lines.append(f"{k}: {v['ltp']:.0f} ({(v['ltp'] / v['prev_close'] - 1) * 100:+.2f}%)")
+        g = global_markets("^GSPC,^IXIC,^N225,^HSI,GC=F,BZ=F,INR=X,^TNX")["instruments"]
+        names = {"^GSPC": "S&P 500", "^IXIC": "Nasdaq", "^N225": "Nikkei", "^HSI": "Hang Seng", "GC=F": "Gold", "BZ=F": "Brent", "INR=X": "USD/INR", "^TNX": "US 10Y"}
+        lines.append("")
+        lines.append("Global: " + " · ".join(f"{names[k]} {(v['ltp'] / v['prev_close'] - 1) * 100:+.1f}%" for k, v in g.items() if k in names))
+    except Exception as e:
+        lines.append(f"(market data unavailable: {e})")
+    try:
+        items = news()["items"]
+        hot = [i for i in items if any(w in i["title"].lower() for w in HI_WORDS)][:6]
+        if hot:
+            lines.append("")
+            lines.append("High-impact headlines:")
+            lines += [f"• {i['title']} ({i['source']})" for i in hot]
+    except Exception:
+        pass
+    try:
+        import notify
+        syms = sorted({r["sym"] for r in notify.load_rules()} | set(cfg("watchlist", [])))[:25]
+        if syms:
+            wq = YahooProvider().quote(syms)
+            lines.append("")
+            lines.append("Watchlist: " + " · ".join(f"{s} {(v['ltp'] / v['prev_close'] - 1) * 100:+.1f}%" for s, v in wq.items()))
+    except Exception:
+        pass
+    lines.append("")
+    lines.append("Open DalalQuant for opportunities and signals: https://gokaran-shukla.github.io/dalalquant")
+    return f"DalalQuant morning brief · {dt.date.today():%a %d %b %Y}", "\n".join(lines)
+
+
+@app.post("/brief/send", dependencies=[Depends(auth)])
+def brief_send(text: str | None = None):
+    import notify
+    title, body = build_brief()
+    if text:
+        body = text + "\n\n" + body
+    return {"result": notify.send(cfg, title, body), "preview": body}
+
+
+@app.on_event("startup")
+def _start_scheduler():
+    if cfg("scheduler", True):
+        import notify
+        def prov():
+            name = (cfg("force_broker") or cfg("broker", "yahoo")).lower()
+            return PROVIDERS[name]()
+        notify.Scheduler(cfg, prov, build_brief, every=int(cfg("alert_poll_seconds", 180))).start()
+
+
 # ---- NSE public data ------------------------------------------------------------
 @app.post("/nse/sync", dependencies=[Depends(auth)])
 def nse_sync(days: int = 760, fo_days: int = 60):
