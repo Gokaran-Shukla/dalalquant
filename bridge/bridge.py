@@ -713,6 +713,34 @@ class OrderIn(BaseModel):
     tag: str | None = "DQ"
 
 
+SYNC_FILE = Path(__file__).with_name("sync_state.json")
+
+
+@app.get("/sync", dependencies=[Depends(auth)])
+def sync_get():
+    """Return the last saved app state (watchlists, settings, journal…) for multi-device sync."""
+    if not SYNC_FILE.exists():
+        return {"updated": 0, "state": {}}
+    return json.loads(SYNC_FILE.read_text())
+
+
+@app.put("/sync", dependencies=[Depends(auth)])
+async def sync_put(request: Request):
+    body = await request.json()
+    if not isinstance(body, dict) or not isinstance(body.get("state"), dict):
+        raise HTTPException(400, "expected {updated, state:{...}}")
+    raw = json.dumps(body)
+    if len(raw) > 8_000_000:
+        raise HTTPException(413, "state too large (8 MB max)")
+    cur = json.loads(SYNC_FILE.read_text()) if SYNC_FILE.exists() else {"updated": 0}
+    if body.get("updated", 0) < cur.get("updated", 0) and not body.get("force"):
+        raise HTTPException(409, "the bridge has a newer state — pull first (or force)")
+    tmp = SYNC_FILE.with_suffix(".tmp")
+    tmp.write_text(raw)
+    tmp.replace(SYNC_FILE)
+    return {"ok": True, "updated": body.get("updated"), "bytes": len(raw)}
+
+
 @app.get("/health")
 def health(x_broker: str | None = Header(default=None)):
     return {"status": "ok", "broker": (cfg("force_broker") or x_broker or cfg("broker", "yahoo")), "time": dt.datetime.now().isoformat(), "live_orders": bool(cfg("allow_live_orders", False))}

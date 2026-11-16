@@ -2,7 +2,7 @@
 /* ============================== EXECUTION & RISK: TCA · GTT/OCO brackets · portfolio circuit breakers ============================== */
 S.xr = Object.assign({ maxDD: 8, corrHi: 0.65, blackout: 3, blackoutOn: true, ddOn: true, corrOn: true, peak: null, dates: {}, alerts: [] }, LS.get('dq_xr', {}));
 function saveXr() { LS.set('dq_xr', { maxDD: S.xr.maxDD, corrHi: S.xr.corrHi, blackout: S.xr.blackout, blackoutOn: S.xr.blackoutOn, ddOn: S.xr.ddOn, corrOn: S.xr.corrOn, peak: S.xr.peak, dates: S.xr.dates, alerts: S.xr.alerts.slice(0, 40), haltedBy: S.xr.haltedBy }) }
-function xrAlert(t) { S.xr.alerts.unshift({ t, time: Date.now() }); saveXr(); alog('⚠ ' + t); toast(esc(t), 6000) }
+function xrAlert(t) { S.xr.alerts.unshift({ t, time: Date.now() }); saveXr(); alog('⚠ ' + t); toast(esc(t), 6000); if (typeof dqNotify === 'function') dqNotify('DalalQuant risk alert', t) }
 
 // ---- results dates: user-entered > NSE board-meeting announcement > estimate (quarter end + 40d, Q4 + 50d)
 function nextResults(sym) { if (S.xr.dates[sym]) return { d: S.xr.dates[sym], src: 'entered' };

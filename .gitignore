@@ -7,3 +7,4 @@ bridge/cache/
 .pytest_cache/
 node_modules/
 deploy/config.json
+bridge/sync_state.json
