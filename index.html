@@ -120,6 +120,7 @@ pre.code{background:#0c1218;border:1px solid var(--ln);border-radius:7px;padding
     <section class="tab" id="tab-news"></section>
     <section class="tab" id="tab-rankings"></section>
     <section class="tab" id="tab-screener"></section>
+    <section class="tab" id="tab-enquiry"></section>
     <section class="tab" id="tab-analyze"></section>
     <section class="tab" id="tab-backtest"></section>
     <section class="tab" id="tab-options"></section>
@@ -391,10 +392,10 @@ function quarterLabels(n){let {q,fy}=fyq(new Date());q--;if(q===0){q=4;fy--}cons
 /* ============================== Simulated demo data ============================== */
 function genSim(s){
  const R=rng(hash(s.sym)),g=()=>gauss(R),n=S.dates.length,fin=FIN.has(s.sector);
- const vol=0.17+R()*0.23;let mu=-0.06+R()*0.32;const us=s.mkt==='US';let p=us?Math.exp(Math.log(25)+R()*Math.log(900/25)):Math.exp(Math.log(90)+R()*Math.log(6000/90));
+ const vol=0.17+R()*0.21;let mu=-0.03+R()*0.27;const us=s.mkt==='US';let p=us?Math.exp(Math.log(25)+R()*Math.log(900/25)):Math.exp(Math.log(90)+R()*Math.log(6000/90));
  const baseVol=Math.round(2e5+R()*8e6);const dt=1/252;const bars=[];let regime=mu;
  for(let i=0;i<n;i++){
-  if(i%120===0) regime=mu+0.35*g();
+  if(i%120===0) regime=mu+0.2*g();
   const o=p*(1+g()*vol*0.12*Math.sqrt(dt));
   const ret=(regime-0.5*vol*vol)*dt+vol*Math.sqrt(dt)*g();
   const c=o*Math.exp(ret);
@@ -402,6 +403,7 @@ function genSim(s){
   const lo=Math.min(o,c)*(1-Math.abs(g())*vol*0.35*Math.sqrt(dt));
   bars.push({t:S.dates[i],o:r2(o),h:r2(hi),l:r2(lo),c:r2(c),v:Math.round(baseVol*(0.6+R()*0.8)*(1+Math.abs(ret)*25))});p=c;
  }
+ {const L=Math.log(bars[n-1].c/bars[0].c),lo=Math.log(0.45),hi=Math.log(3.2);const tgt=Math.min(hi,Math.max(lo,L));if(tgt!==L){const adj=tgt-L;bars.forEach((b,i)=>{const f=Math.exp(adj*i/(n-1));b.o=r2(b.o*f);b.h=r2(b.h*f);b.l=r2(b.l*f);b.c=r2(b.c*f)})}}
  const QL=quarterLabels(20);const revL=us?Math.exp(Math.log(3000)+R()*Math.log(150000/3000)):Math.exp(Math.log(600)+R()*Math.log(80000/600));
  const ga=-0.03+R()*0.33;const em=fin?0.30+R()*0.25:0.08+R()*0.27;const nm=em*(0.42+R()*0.25);const fcfr=0.45+R()*0.65;
  const q=QL.map((L,k)=>{const yrsBack=(QL.length-1-k)/4;const seas=1+0.035*Math.sin((L.q)*1.7+R());const rev=revL/Math.pow(1+ga,yrsBack)*seas*(1+0.035*g());
@@ -601,7 +603,7 @@ function barChart(cv,labels,sets,o={}){
 }
 
 /* ============================== Shell, nav, mode ============================== */
-const TABS=[['markets','◉','India Markets'],['world','🌐','World · US · Commodities'],['news','✎','News & Events'],['rankings','★','Rankings'],['screener','⌕','Screener'],['analyze','◈','Company'],['backtest','∿','Strategy Lab'],['options','Φ','F&O · Options'],['portfolio','▣','Portfolio'],['algo','⚡','Algo & Brokers'],['data','⚙','Data & Settings']];
+const TABS=[['markets','◉','India Markets'],['world','🌐','World · US · Commodities'],['news','✎','News & Events'],['rankings','★','Rankings'],['screener','⌕','Screener'],['enquiry','✦','Ask · Company Enquiry'],['analyze','◈','Company'],['backtest','∿','Strategy Lab'],['options','Φ','F&O · Options'],['portfolio','▣','Portfolio'],['algo','⚡','Algo & Brokers'],['data','⚙','Data & Settings']];
 function buildNav(){$('#nav').innerHTML=TABS.map(([id,ic,l])=>`<button data-tab="${id}"><span class="ico">${ic}</span>${l}</button>`).join('')+`<div class="foot">Signals are rule-based calculations on the data shown — not investment advice. Markets carry risk.</div>`}
 function dataMode(){const srcs=Object.values(S.D).map(d=>d.src.px);const live=srcs.filter(x=>x==='live').length,csv=srcs.filter(x=>x==='csv').length,sim=srcs.filter(x=>x==='sim').length;return {live,csv,sim}}
 function updateMode(){const m=dataMode();let b='';if(m.live)b+=`<span class="badge b-live">LIVE ${m.live}</span> `;if(m.csv)b+=`<span class="badge b-csv">CSV ${m.csv}</span> `;if(m.sim)b+=`<span class="badge b-sim">SIM ${m.sim}</span>`;$('#modeBadge').innerHTML=b;
@@ -610,7 +612,7 @@ function srcBadge(sym){const d=S.D[sym];if(!d)return '';const p=d.src.px,f=d.src
 function clock(){const now=new Date();const ist=new Date(now.getTime()+(now.getTimezoneOffset()+330)*60000);const wd=ist.getDay(),mins=ist.getHours()*60+ist.getMinutes();let st;if(wd===0||wd===6)st='Weekend · closed';else if(mins>=540&&mins<555)st='Pre-open';else if(mins>=555&&mins<930)st='<span class="up">● Market open</span>';else st='Closed';
  $('#clock').innerHTML=`IST ${String(ist.getHours()).padStart(2,'0')}:${String(ist.getMinutes()).padStart(2,'0')} · ${st}`}
 function go(tab,push=true){if(!TABS.find(t=>t[0]===tab))tab='markets';S.tab=tab;$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));$$('section.tab').forEach(s=>s.classList.toggle('on',s.id==='tab-'+tab));if(push&&location.hash!=='#'+tab){try{history.replaceState(null,'','#'+tab)}catch(e){location.hash=tab}}render(tab);window.scrollTo(0,0)}
-function render(tab=S.tab){try{({markets:renderMarkets,world:renderWorld,news:renderNews,rankings:renderRankings,screener:renderScreener,analyze:renderAnalyze,backtest:renderBacktest,options:renderOptions,portfolio:renderPortfolio,algo:renderAlgo,data:renderData})[tab]()}catch(e){console.error(e);$('#tab-'+tab).innerHTML+=`<div class="card err">Render error: ${esc(e.message)}</div>`}}
+function render(tab=S.tab){try{({markets:renderMarkets,world:renderWorld,news:renderNews,rankings:renderRankings,screener:renderScreener,analyze:renderAnalyze,enquiry:renderEnquiry,backtest:renderBacktest,options:renderOptions,portfolio:renderPortfolio,algo:renderAlgo,data:renderData})[tab]()}catch(e){console.error(e);$('#tab-'+tab).innerHTML+=`<div class="card err">Render error: ${esc(e.message)}</div>`}}
 function openSym(sym){if(!S.bySym[sym]){toast('Unknown symbol '+esc(sym));return}S.sel=sym;S._ivov=null;go('analyze')}
 function vpill(v){const c={'BUY ZONE':'v-buy','HOLD':'v-hold','WAIT':'v-wait','EXIT':'v-exit'}[v]||'v-wait';return `<span class="pill ${c}">${v||'—'}</span>`}
 function sbar(x){if(x==null)return '—';const col=x>=68?'#22c55e':x>=55?'#3b82f6':x>=42?'#f59e0b':'#ef4444';return `<span class="n">${x.toFixed(0)}</span><span class="sbar"><i style="width:${clamp(x)}%;background:${col}"></i></span>`}
@@ -801,7 +803,7 @@ function renderAnalyze(){
  el.innerHTML=`<div class="card"><div class="row" style="gap:14px;align-items:flex-end">
   <div>${star(s.sym)} <span style="font-size:20px;font-weight:700">${esc(s.sym)}</span> ${srcBadge(s.sym)} ${m.opp?'<span class="badge b-live">OPPORTUNITY</span>':''}<div class="sub">${esc(s.name)} · ${esc(s.sector)} · ${s.idx.map(i=>`<span class="tag">${esc(i)}</span>`).join('')}</div></div>
   <div><span class="big">${CUR(s.sym)}${fN(m.price)}</span> <span class="n" style="font-size:14px">${m.chg>=0?'<span class=up>+':'<span class=dn>'}${fN(m.chg)}</span> ${fP(m.chgp,2)}</span></div>
-  <div class="spacer"></div><div class="row"><button class="btn s xs" data-act="toBacktest">Backtest</button><button class="btn s xs" data-act="toTicket">Trade</button><button class="btn s xs" data-act="addHold">+ Portfolio</button><button class="btn xs" data-act="report">Report</button></div></div></div>
+  <div class="spacer"></div><div class="row"><button class="btn s xs" data-act="toEnq">Ask / dossier</button><button class="btn s xs" data-act="toBacktest">Backtest</button><button class="btn s xs" data-act="toTicket">Trade</button><button class="btn s xs" data-act="addHold">+ Portfolio</button><button class="btn xs" data-act="report">Report</button></div></div></div>
  <div class="g2"><div class="card"><h3>Chart <span class="r row" style="text-transform:none;letter-spacing:0">${[[63,'3M'],[126,'6M'],[252,'1Y'],[504,'2Y'],[9999,'Max']].map(([v,l])=>`<button class="btn xs ${A.tf===v?'on':'s'}" data-tf="${v}">${l}</button>`).join('')}</span></h3>
   <div class="row" style="margin-bottom:6px">${[['sma50','SMA 50','#f59e0b'],['sma200','SMA 200','#a78bfa'],['ema20','EMA 20','#22d3ee'],['bb','Bollinger','#3b82f6'],['st','Supertrend','#f472b6']].map(([k,l,c])=>`<label class="c"><input type="checkbox" data-ov="${k}" ${A.ov[k]?'checked':''}><span style="color:${c}">${l}</span></label>`).join('')}
   <select id="anSub">${[['rsi','RSI (14)'],['macd','MACD (12,26,9)'],['vol','Volume'],['none','No sub-panel']].map(([k,l])=>`<option value="${k}" ${A.sub===k?'selected':''}>${l}</option>`).join('')}</select></div>
@@ -1092,6 +1094,8 @@ GET  /optionchain?underlying=NIFTY 50&expiry=YYYY-MM-DD
 GET  /fundamentals?symbol=INFY       → {q:[{p,fy,rev,ebitda,np,fcf,eps}],shares,debt,cash,equity,...}
 GET  /global?ids=^GSPC,GC=F,...       → {instruments:{id:{ltp,prev_close,closes[]}}}
 GET  /news                           → {items:[{title,link,source,time,summary}]}
+GET  /company?symbol=INFY            → {summary,industry,website,employees,events[],news[]}
+POST /ask {symbol,question,context}   → {answer,model}
 POST /order  {symbol,exchange,side,qty,type,price,product,tag}
                                      → {status,order_id,message}
 GET  /positions · /holdings · /funds
@@ -1219,6 +1223,82 @@ function pulseCard(all,adv,dec,opp){const st=idxStat('NIFTY 50'),bk=idxStat('NIF
  Global cues are <b class="${G.score>1?'up':G.score<-1?'dn':''}">${G.score>1?'positive':G.score<-1?'negative':'mixed'}</b>${G.cues[0]?' — '+esc(G.cues[0].txt):''}.
  The signal engine has <b class="up">${buy} stocks in BUY ZONE</b> and <b class="dn">${ex} on EXIT</b>, and has flagged <b style="color:#4ade80">${opp.length} opportunit${opp.length===1?'y':'ies'}</b> (strong businesses trading well below their highs).${S.news.filter(n=>n.imp==='high').length?` <b class="dn">${S.news.filter(n=>n.imp==='high').length} high-impact headlines</b> in the news feed.`:''}</div></div>`}
 
+/* ============================== ASK · COMPANY ENQUIRY ============================== */
+S.enq={sym:null,prof:{},q:'',ans:null,busy:false};
+function resultsWindow(){// next expected results window from Indian FY quarter calendar (estimate)
+ const now=new Date();const ends=[[5,30],[8,30],[11,31],[2,31]];// Jun30, Sep30, Dec31, Mar31 (month index)
+ const cands=[];for(let y=now.getFullYear()-1;y<=now.getFullYear()+1;y++)ends.forEach(([m,d])=>{const e=new Date(y,m,d);const by=new Date(e.getTime()+(m===2?60:45)*86400000);cands.push({e,by})});
+ const nx=cands.filter(c=>c.by>now).sort((a,b)=>a.by-b.by)[0];const {q,fy}=fyq(nx.e);return {label:`Q${q} FY${String(fy).slice(2)}`,qend:nx.e,by:nx.by}}
+function projections(m){if(!m.hasF||!(m.epsTTM>0))return null;const base=clamp(((m.rev3y??m.rev1y??0.08)*0.6+(m.np3y??m.np1y??0.08)*0.4),-0.1,0.3);const pe=(S.SEC[S.bySym[m.sym].sector]||{}).medPE||m.pe||15;
+ const sc=[['Bear',base-0.06,pe*0.8],['Base',base,pe],['Bull',base+0.05,pe*1.15]].map(([n,g,xpe])=>{const eps3=m.epsTTM*Math.pow(1+g,3);const px=eps3*xpe;return {n,g,xpe,eps3,px,cagr:Math.pow(Math.max(px,0.01)/m.price,1/3)-1}});return {base,sc}}
+function driversRisks(m,s){const D=[],R=[];const P=(c,t,arr)=>{if(c)arr.push(t)};
+ P(m.rev3y>0.15,`Fast top-line growth: sales compounding ${fPp(m.rev3y)} a year over 3 years`,D);P(m.np3y>m.rev3y&&m.np3y>0.1,`Operating leverage: profit growing faster (${fPp(m.np3y)}) than sales`,D);
+ P(m.ebitdaMprev!=null&&m.ebitdaM>m.ebitdaMprev+0.01,`Margins expanding (OPM ${fPp(m.ebitdaM)} vs ${fPp(m.ebitdaMprev)} a year ago)`,D);P(m.roe>0.18,`High return on equity (${fPp(m.roe)})`,D);
+ P(!m.fin&&m.de!=null&&m.de<0.3,`Strong balance sheet (debt/equity ${fN(m.de)})`,D);P(m.mshare>0.15,`Sector leader: ~${fPp(m.mshare,0)} of tracked sector sales`,D);P(m.ups>0.15,`Trades ${fPp(m.ups,0)} below median intrinsic value`,D);
+ P(m.sma200&&m.price>m.sma200&&m.sma50>m.sma200,'Primary uptrend intact (above 200-DMA, golden-cross regime)',D);P(m.fscore>=7,`Financial-strength F-score ${m.fscore}/8`,D);
+ P(m.rev3y!=null&&m.rev3y<0.05,`Slow growth: 3-year sales CAGR only ${fPp(m.rev3y)}`,R);P(m.ebitdaMprev!=null&&m.ebitdaM<m.ebitdaMprev-0.01,`Margins contracting (OPM ${fPp(m.ebitdaM)} vs ${fPp(m.ebitdaMprev)})`,R);
+ P(!m.fin&&m.de>1,`High leverage (debt/equity ${fN(m.de)})`,R);P(m.pe>60,`Rich valuation (P/E ${fN(m.pe,0)}) leaves little room for disappointment`,R);P(m.ups!=null&&m.ups<-0.2,`Price ${fPp(-m.ups,0)} above median intrinsic value`,R);
+ P(m.sma200&&m.price<m.sma200,'Below the 200-DMA: the long-term trend is down',R);P(m.vol>0.4,`High volatility (${fPp(m.vol,0)} annualised)`,R);P(m.npYoY!=null&&m.npYoY<-0.1,`Latest quarter profit fell ${fPp(-m.npYoY,0)} YoY`,R);
+ const d=S.D[m.sym];if(d.sh&&d.sh.length>2){const a=d.sh[0].prom,b=d.sh[d.sh.length-1].prom;P(b<a-1.5,`Promoter holding down from ${fN(a,1)}% to ${fN(b,1)}%`,R);P(b>a+1,`Promoter holding up from ${fN(a,1)}% to ${fN(b,1)}%`,D)}
+ const sec=s.sector;const G=globalCues();G.cues.filter(c=>c.sec.includes(sec)).forEach(c=>(c.dir>0?D:R).push('Global cue: '+c.txt));
+ return {D,R}}
+function callFor(m){const c=S.cfg,b=S.D[m.sym].bars;const low20=Math.min(...b.slice(-20).map(x=>x.l)),hi20=Math.max(...b.slice(-20).map(x=>x.h));
+ const stop=Math.max(0.01,Math.min(m.price-c.atrK*m.atr,low20*0.99));const r=m.price-stop;
+ const inv=m.verdict==='BUY ZONE'||(m.opp&&!m.hardExit)?'ACCUMULATE':m.verdict==='HOLD'?'HOLD':m.verdict==='WAIT'?'WAIT FOR SETUP':'EXIT / AVOID';
+ const ezLo=m.sma50&&m.sma50<m.price?Math.max(m.sma50,stop+r*0.3):m.price-r*0.5,ezHi=m.price;
+ const conv=m.score>=75?'High':m.score>=60?'Medium':'Low';
+ return {inv,trader:m.verdict,ezLo,ezHi,stop,t1:m.price+r*1.5,t2:m.price+r*c.rr*1.5,t3:m.iv&&m.iv.avg>m.price?m.iv.avg:null,low20,hi20,conv,exitIf:[`Daily close below ${fN(stop)} (stop)`,m.sma200?`Close below 200-DMA ${fN(m.sma200)} with 50-DMA below 200-DMA`:null,`Supertrend turns bearish (now ${m.stDir===1?'bullish':'bearish'}, line ${fN(m.stLine)})`,m.iv&&m.iv.avg?(m.price>m.iv.avg*1.25?`Already ${fPp(m.price/m.iv.avg-1,0)} above fair value (~${fN(m.iv.avg)}) — consider booking partial profits`:`Price rises above ~${fN(m.iv.avg*1.25)} (25% over fair value) — consider booking profits`):null].filter(Boolean)}}
+async function loadCompany(sym){if(!S.bridge.ok||S.enq.prof[sym])return;try{const r=await bridgeFetch('/company?symbol='+encodeURIComponent(sym),{timeout:40000});S.enq.prof[sym]=r;if(S.tab==='enquiry'&&S.enq.sym===sym)renderEnquiry()}catch(e){S.enq.prof[sym]={error:e.message};if(S.tab==='enquiry')renderEnquiry()}}
+function dossierText(sym){const s=S.bySym[sym],m=S.M[sym],P=projections(m),DR=driversRisks(m,s),C=callFor(m),pr=S.enq.prof[sym]||{};
+ return JSON.stringify({symbol:sym,name:s.name,sector:s.sector,market:s.mkt,indices:s.idx,data_source:S.D[sym].src,price:m.price,change_1d:m.chgp,returns:{w1:m.r1w,m1:m.r1m,m3:m.r3m,y1:m.r1y,y3:m.r3y},high52:m.h52,low52:m.l52,score:m.score,components:m.comp,signal:m.verdict,
+  valuation:{pe:m.pe,pb:m.pb,ev_ebitda:m.evEb,sector_pe:(S.SEC[s.sector]||{}).medPE,intrinsic:m.iv,upside:m.ups},fundamentals:{sales_ttm:m.revTTM,profit_ttm:m.npTTM,roe:m.roe,roce:m.roce,de:m.de,opm:m.ebitdaM,npm:m.npM,sales_3y_cagr:m.rev3y,profit_3y_cagr:m.np3y,latest_q_sales_yoy:m.revYoY,latest_q_profit_yoy:m.npYoY,promoter:m.promoter},
+  technicals:{rsi:m.rsi,sma50:m.sma50,sma200:m.sma200,supertrend:m.stDir,vol:m.vol,beta:m.beta,maxdd_1y:m.mdd},projections:P,drivers:DR.D,risks:DR.R,call:C,profile:{summary:pr.summary,industry:pr.industry,events:pr.events},recent_news:(pr.news||[]).slice(0,12).map(n=>n.title)})}
+async function askAI(){const E=S.enq;const q=($('#enqQ')||{}).value||E.q;E.q=q;if(!q.trim())return;if(!S.bridge.ok){E.ans={err:'The AI analyst runs through bridge.py with your Anthropic API key (see README). Connect the bridge in Algo & Brokers first.'};renderEnquiry();return}
+ E.busy=true;E.ans=null;renderEnquiry();try{const r=await bridgeFetch('/ask',{method:'POST',timeout:120000,body:JSON.stringify({symbol:E.sym,question:q,context:dossierText(E.sym)})});E.ans={text:r.answer||'(empty answer)',model:r.model}}catch(e){E.ans={err:e.message}}E.busy=false;renderEnquiry()}
+function mdLite(t){return esc(t).replace(/^### (.*)$/gm,'<div class="h3" style="margin-top:8px">$1</div>').replace(/^## (.*)$/gm,'<div class="h3" style="margin-top:10px">$1</div>').replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/^[-•] (.*)$/gm,'<div class="reason"><span class="i mu">•</span><span>$1</span></div>').replace(/\n{2,}/g,'<br><br>').replace(/\n/g,'<br>')}
+function renderEnquiry(){
+ const el=$('#tab-enquiry');const E=S.enq;if(!E.sym)E.sym=S.sel;const sym=E.sym,s=S.bySym[sym],m=S.M[sym];
+ const head=`<div class="card"><h3>Ask about any company <span class="r mu" style="text-transform:none;letter-spacing:0">Past · present · future prospects · entry/exit call · events</span></h3><div class="row"><input id="enqSym" list="symlist" class="w120" style="width:220px" placeholder="Company or symbol" value="${esc(sym||'')}"><button class="btn" data-act="enqGo">Build dossier</button>
+  <span class="mu">Quick:</span>${oppList(4).map(o=>`<button class="btn s xs" data-enq="${esc(o.sym)}">${esc(o.sym)}</button>`).join('')}${['RELIANCE','HDFCBANK','TCS','NVDA'].map(x=>`<button class="btn s xs" data-enq="${x}">${x}</button>`).join('')}</div></div>`;
+ if(!s||!m){el.innerHTML=head+'<div class="card mu">Type a company name or NSE/US symbol above.</div>';return}
+ loadCompany(sym);
+ const d=S.D[sym],P=projections(m),DR=driversRisks(m,s),C=callFor(m),pr=E.prof[sym]||{},Y=m.hasF?annualize(d.q):[],cur=CUR(sym),rw=resultsWindow();
+ const nifty=S.IDX[s.mkt==='US'?'S&P 500 (leaders)':'NIFTY 50'];const nb=nifty?nifty.bars:[];const rel=(k)=>{if(nb.length<=k||d.bars.length<=k)return null;return (m.price/d.bars[d.bars.length-1-k].c)-(nb[nb.length-1].c/nb[nb.length-1-k].c)};
+ const callCls={'ACCUMULATE':'v-buy','HOLD':'v-hold','WAIT FOR SETUP':'v-wait','EXIT / AVOID':'v-exit'}[C.inv];
+ const prompts=['What are the biggest risks over the next 12 months?','Is this a good entry now or should I wait? Give levels.','How does it compare with its closest peers?','What would change the investment thesis?'];
+ el.innerHTML=head+`
+ <div class="card" style="border-color:#23406e;background:linear-gradient(180deg,#0f1b2d,#10161e)"><div class="row" style="gap:14px;align-items:flex-end"><div>${star(sym)} <span style="font-size:22px;font-weight:700">${esc(s.name)}</span> <span class="mu">${esc(sym)}</span> ${srcBadge(sym)}<div class="sub">${esc(s.sector)} · ${s.idx.map(i=>`<span class="tag">${esc(i)}</span>`).join('')}${pr.industry?` · ${esc(pr.industry)}`:''}</div></div>
+  <div><span class="big">${cur}${fN(m.price)}</span> ${fP(m.chgp,2)}</div><span class="spacer"></span><div style="text-align:right"><div class="sub">Investor call</div><span class="pill ${callCls}" style="font-size:14px;padding:5px 14px">${C.inv}</span><div class="sub" style="margin-top:4px">Trader signal ${vpill(C.trader)} · conviction <b>${C.conv}</b> · score ${fN(m.score,0)}/100</div></div></div>
+  <div class="pulse" style="margin-top:10px">${esc(s.name)} trades at ${cur}${fN(m.price)}, ${fPt(m.offH)} from its 52-week high, after a ${fPt(m.r1y)} move over the past year (${rel(252)!=null?(rel(252)>=0?'beating':'lagging')+' the '+(s.mkt==='US'?'S&P':'NIFTY')+' by '+fPp(Math.abs(rel(252)),1):''}).${m.hasF?` Sales have compounded at <b>${fPt(m.rev3y)}</b> and profit at <b>${fPt(m.np3y)}</b> a year over three years, with ROE of <b>${fPp(m.roe)}</b>. At P/E <b>${fN(m.pe,1)}</b> vs a sector median of ${fN((S.SEC[s.sector]||{}).medPE,1)}, the median of five valuation methods puts fair value near <b>${cur}${fN(m.iv.avg,0)}</b> (${fPt(m.ups)}).`:''} The trend engine reads <b>${m.verdict}</b>; ${DR.D.length} positive drivers vs ${DR.R.length} risk flags.</div></div>
+ <div class="g2e"><div class="card"><h3>Entry / exit call</h3>
+  <div class="kv">${kv('Entry zone',`${fN(C.ezLo)} – ${fN(C.ezHi)}`)}${kv('Stop-loss',fN(C.stop),-1)}${kv('Target 1',fN(C.t1),1)}${kv('Target 2',fN(C.t2),1)}${kv('Fair-value target',C.t3?fN(C.t3):'—',C.t3?1:null)}${kv('20-day range',`${fN(C.low20)} – ${fN(C.hi20)}`)}</div>
+  <div class="h3" style="margin-top:10px">Exit if</div>${C.exitIf.map(x=>`<div class="reason"><span class="i dn">✗</span><span>${esc(x)}</span></div>`).join('')}
+  <div class="h3" style="margin-top:10px">Signal checklist</div>${m.reasons.map(r=>`<div class="reason"><span class="i ${r.ok?'up':'dn'}">${r.ok?'✓':'✗'}</span><span>${esc(r.t)}</span></div>`).join('')}
+  <div class="note">“Investor call” blends the score, opportunity screen and hard-exit rule; “trader signal” is the shorter-term trend reading. Mechanical output on the data loaded — not investment advice.</div></div>
+ <div class="card"><h3>Future prospects — 3-year scenarios</h3>${P?`<div class="tw"><table class="t"><thead><tr><th>Scenario</th><th class="n">EPS growth/yr</th><th class="n">EPS in 3Y</th><th class="n">Exit P/E</th><th class="n">Implied price</th><th class="n">CAGR from here</th></tr></thead><tbody>${P.sc.map(x=>`<tr><td><b class="${x.n==='Bull'?'up':x.n==='Bear'?'dn':''}">${x.n}</b></td><td class="n">${fPt(x.g)}</td><td class="n">${fN(x.eps3)}</td><td class="n">${fN(x.xpe,1)}×</td><td class="n">${cur}${fN(x.px,0)}</td><td class="n">${fP(x.cagr)}</td></tr>`).join('')}</tbody></table></div>
+  <canvas class="chart2" id="enqScen" style="margin-top:8px;height:170px"></canvas><div class="note">Base growth blends 3-year sales and profit CAGR; bear/bull ±5–6 points; exit P/E = sector median (bear 0.8×, bull 1.15×).</div>`:'<div class="mu">Needs fundamentals with positive EPS.</div>'}
+  <div class="g2e" style="margin-top:8px"><div><div class="h3 up">Growth drivers</div>${DR.D.map(x=>`<div class="reason"><span class="i up">▲</span><span>${esc(x)}</span></div>`).join('')||'<div class="mu">None flagged.</div>'}</div><div><div class="h3 dn">Risks</div>${DR.R.map(x=>`<div class="reason"><span class="i dn">▼</span><span>${esc(x)}</span></div>`).join('')||'<div class="mu">None flagged.</div>'}</div></div></div></div>
+ <div class="g2e"><div class="card"><h3>Past — track record</h3><div class="kv">${kv('1M',fPt(m.r1m),m.r1m)}${kv('3M',fPt(m.r3m),m.r3m)}${kv('1Y',fPt(m.r1y),m.r1y)}${kv('3Y',fPt(m.r3y),m.r3y)}${kv('vs index 1Y',fPt(rel(252)),rel(252))}${kv('Max DD 1Y',fPt(m.mdd),m.mdd)}</div>
+  ${Y.length?`<div class="tw" style="margin-top:8px"><table class="t"><thead><tr><th></th>${Y.map(y=>`<th class="n">${y.fy}</th>`).join('')}</tr></thead><tbody><tr><td>Sales</td>${Y.map(y=>`<td class="n">${fN(y.rev,0)}</td>`).join('')}</tr><tr><td>Net profit</td>${Y.map(y=>`<td class="n">${fN(y.np,0)}</td>`).join('')}</tr><tr><td>OPM %</td>${Y.map(y=>`<td class="n">${fN(y.ebitda/y.rev*100,1)}</td>`).join('')}</tr><tr><td>EPS</td>${Y.map(y=>`<td class="n">${fN(y.eps)}</td>`).join('')}</tr></tbody></table></div>`:''}
+  <canvas class="chart2" id="enqPx" style="margin-top:8px;height:170px"></canvas></div>
+ <div class="card"><h3>Present — where it stands</h3><div class="kv">${kv('Market cap',fMoney(m.mcap,sym))}${kv('P/E',fN(m.pe,1))}${kv('P/B',fN(m.pb,2))}${kv('ROE',fPp(m.roe))}${kv('Debt/Equity',m.fin?'n/a':fN(m.de))}${kv('OPM',fPp(m.ebitdaM))}${kv('Sales YoY (Q)',fPt(m.revYoY),m.revYoY)}${kv('Profit YoY (Q)',fPt(m.npYoY),m.npYoY)}${kv('Market share',fPp(m.mshare))}${kv('Promoter',fN(m.promoter,1)+'%')}${kv('RSI',fN(m.rsi,0))}${kv('Trend',m.sma200?(m.price>m.sma200?'Above 200-DMA':'Below 200-DMA'):'—')}</div>
+  <div class="h3" style="margin-top:10px">Business profile</div>${pr.summary?`<div class="sub" style="line-height:1.6;color:#cbd5e1">${esc(pr.summary.slice(0,900))}${pr.summary.length>900?'…':''}</div><div class="row" style="margin-top:6px">${pr.website?`<a class="btn s xs" href="${esc(pr.website)}" target="_blank" rel="noopener">Website ↗</a>`:''}${pr.employees?`<span class="tag">${fN(pr.employees,0)} employees</span>`:''}${pr.city?`<span class="tag">${esc(pr.city)}</span>`:''}</div>`:`<div class="mu">${pr.error?esc(pr.error):S.bridge.ok?'Loading profile…':'Business description, management and events load through bridge.py.'}</div>`}</div></div>
+ <div class="g2e"><div class="card"><h3>Company events</h3>
+  ${(pr.events||[]).length?pr.events.map(e=>`<div class="cue"><span class="tag" style="flex:none">${esc(e.type)}</span><span><b>${esc(e.date||'')}</b> ${esc(e.detail||'')}</span></div>`).join(''):''}
+  ${s.mkt==='IN'?`<div class="cue"><span class="tag" style="flex:none">Results</span><span><b>${rw.label}</b> results due by <b>${rw.by.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</b> <span class="mu">(estimate: SEBI LODR allows 45 days after quarter-end, 60 for Q4; check the board-meeting date on NSE)</span></span></div>`:''}
+  <div class="cue"><span class="tag" style="flex:none">Market</span><span>Sector-relevant macro events: ${esc(EVENTS.filter(e=>e[1]===(s.mkt==='US'?'US':'India')).slice(0,3).map(e=>e[0]).join(' · '))}</span></div>
+  <div class="row" style="margin-top:8px">${(s.mkt==='IN'?[['Announcements',`https://www.nseindia.com/get-quotes/equity?symbol=${encodeURIComponent(sym)}`],['Board meetings / results',`https://www.nseindia.com/companies-listing/corporate-filings-board-meetings`],['Corporate actions',`https://www.nseindia.com/companies-listing/corporate-filings-actions`]]:[['SEC filings',`https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=${encodeURIComponent(sym)}`]]).map(([l,u])=>`<a class="btn s xs" href="${u}" target="_blank" rel="noopener">${l} ↗</a>`).join('')}</div>
+  ${!(pr.events||[]).length&&!S.bridge.ok?'<div class="note">With the bridge connected: next earnings date, ex-dividend dates, dividend history, splits and bonuses appear here.</div>':''}</div>
+ <div class="card"><h3>Company news</h3>${(pr.news||[]).length?`<div class="news">${pr.news.slice(0,10).map(n=>{classifyNews(n);return `<div class="ni ${n.imp}"><a href="${esc(n.link)}" target="_blank" rel="noopener">${esc(n.title)}</a><div class="meta">${esc(n.source||'')} · ${n.time?new Date(n.time).toLocaleDateString('en-IN'):''} · tone <span class="${n.sent>0?'up':n.sent<0?'dn':'mu'}">${n.sent>0?'positive':n.sent<0?'negative':'neutral'}</span></div></div>`}).join('')}</div>`:`<div class="mu">${S.bridge.ok?'No recent headlines found.':'Company-specific headlines load through bridge.py.'}</div>`}</div></div>
+ <div class="card"><h3>Ask the AI analyst about ${esc(sym)} <span class="r mu" style="text-transform:none;letter-spacing:0">Uses this dossier + your question · runs via bridge.py with your Anthropic API key</span></h3>
+  <div class="row" style="margin-bottom:6px">${prompts.map(p=>`<button class="btn s xs" data-enqprompt="${esc(p)}">${esc(p)}</button>`).join('')}</div>
+  <textarea id="enqQ" rows="3" placeholder="Ask anything about ${esc(s.name)} — prospects, risks, competition, valuation, when to enter or exit…">${esc(E.q)}</textarea>
+  <div class="row" style="margin-top:6px"><button class="btn" data-act="enqAsk" ${E.busy?'disabled':''}>${E.busy?'Thinking…':'Ask'}</button><button class="btn s xs" data-act="enqCopy">Copy dossier</button></div>
+  ${E.ans?(E.ans.err?`<div class="err" style="margin-top:8px">${esc(E.ans.err)}</div>`:`<div class="card" style="margin-top:10px;background:var(--p2)">${mdLite(E.ans.text)}<div class="note">Answer from ${esc(E.ans.model||'the model')} based on the dossier data shown (${d.src.px==='sim'?'<b class="wa">simulated</b>':'loaded'} data). Verify before acting — not investment advice.</div></div>`):''}</div>`;
+ if(P)barChart($('#enqScen'),P.sc.map(x=>x.n).concat(['Now']),[{data:P.sc.map(x=>x.px).concat([m.price]),color:(v,i)=>['#ef4444','#3b82f6','#22c55e','#94a3b8'][i]}]);
+ const b=d.bars.slice(-756);const nbm=new Map(nb.map(x=>[x.t,x.c]));const base0=b[0].c,nb0=nbm.get(b[0].t);lineChart($('#enqPx'),[{data:b.map(x=>x.c/base0*100),color:'#3b82f6',label:sym},{data:b.map(x=>nb0&&nbm.get(x.t)?nbm.get(x.t)/nb0*100:null),color:'#64748b',dash:[4,3],label:s.mkt==='US'?'S&P leaders':'NIFTY 50'}],{labels:b.map(x=>x.t.slice(2,7))});
+}
+
 /* ============================== Events ============================== */
 function fillDatalist(){$('#symlist').innerHTML=S.uni.map(s=>`<option value="${esc(s.sym)}">${esc(s.name)}</option>`).join('')}
 function recompute(){computeAll();updateMode();render()}
@@ -1242,6 +1322,8 @@ document.addEventListener('click',e=>{const t=e.target;const tab=t.closest('[dat
  const dc=t.closest('[data-delcond]');if(dc){S.algo.conds.splice(+dc.dataset.delcond,1);saveAlgo();renderAlgo();return}
  const so2=t.closest('[data-sigorder]');if(so2){const sym=so2.dataset.sigorder,A=S.algo;const qty=A.sizing==='amt'?Math.floor(A.amt/S.M[sym].price):A.qty;placeOrder({sym,side:A.side,qty,type:'MARKET',product:A.product,sl:A.sl,tp:A.tp,strategy:A.name}).then(()=>renderAlgo());return}
  const cp=t.closest('[data-closepos]');if(cp){const k=cp.dataset.closepos,p=S.paper.pos[k];placeOrder({sym:k,side:p.qty>0?'SELL':'BUY',qty:Math.abs(p.qty),type:'MARKET',product:'MIS',strategy:'manual exit'}).then(()=>renderAlgo());return}
+ const eq=t.closest('[data-enq]');if(eq){S.enq.sym=eq.dataset.enq;S.enq.ans=null;S.enq.q='';renderEnquiry();return}
+ const ep=t.closest('[data-enqprompt]');if(ep){S.enq.q=ep.dataset.enqprompt;const ta=$('#enqQ');if(ta)ta.value=S.enq.q;askAI();return}
  const bts=t.closest('[data-btsym]');if(bts){S.bt.sym=bts.dataset.btsym;runBT();renderBacktest();return}
  const a=t.closest('[data-act]');if(!a)return;const act=a.dataset.act;
  const acts={
@@ -1252,6 +1334,7 @@ document.addEventListener('click',e=>{const t=e.target;const tab=t.closest('[dat
   scrRun(){S.scr.q=$('#scrQ').value;runScreen();renderScreener()},
   scrSave(){const q=$('#scrQ').value;$('#modalBox').innerHTML='<div class="h3">Save screen</div><input id="svName" style="width:100%" placeholder="Name"><div class="row" style="margin-top:10px;justify-content:flex-end"><button class="btn s" data-act="closeModal">Cancel</button><button class="btn" id="svOk">Save</button></div>';$('#modal').style.display='flex';$('#svOk').onclick=()=>{const n=$('#svName').value.trim()||('Screen '+(S.screens.length+1));S.screens.push({name:n,q});LS.set('dq_screens',S.screens);closeModal();renderScreener()}},
   scrCsv(){const cols=S.scr.cols.map(n=>FIELDS.find(f=>f[0]===n)).filter(Boolean);copyText(['Symbol,Name,LTP,'+cols.map(c=>c[0]).join(',')].concat((S.scr.res||[]).map(sym=>{const m=S.M[sym];return [sym,'"'+S.bySym[sym].name+'"',m.price.toFixed(2)].concat(cols.map(c=>{const v=c[2](m);return v==null||!isFinite(v)?'':v.toFixed(2)})).join(',')})).join('\n'))},
+  toEnq(){S.enq.sym=S.sel;S.enq.ans=null;go('enquiry')},
   toBacktest(){S.bt.sym=S.sel;runBT();go('backtest')},
   toTicket(){S._tkSym=S.sel;go('algo');setTimeout(()=>{const tk=$('#ticket');tk&&tk.scrollIntoView({behavior:'smooth'})},50)},
   addHold(){go('portfolio');setTimeout(()=>{$('#hSym').value=S.sel;$('#hAvg').value=S.M[S.sel].price.toFixed(2);$('#hQty').focus()},30)},
@@ -1273,6 +1356,9 @@ document.addEventListener('click',e=>{const t=e.target;const tab=t.closest('[dat
   condAdd(){S.algo.conds.push({l:'rsi',lp:14,op:'<',rt:'num',r:30,rk:'sma',rp:50});saveAlgo();renderAlgo()},
   scan(){runScan()},
   newsRefresh(){loadNews()},
+  enqGo(){const v=$('#enqSym').value.trim();const u=v.toUpperCase();const x=S.bySym[u]||S.uni.find(z=>z.name.toUpperCase().includes(u));if(!x){toast('Not in the universe — add it in Data & Settings');return}S.enq.sym=x.sym;S.enq.ans=null;S.enq.q='';renderEnquiry()},
+  enqAsk(){askAI()},
+  enqCopy(){copyText(dossierText(S.enq.sym))},
   usRank(){S.rk.mkt='US';S.rk.index='ALL';go('rankings')},
   tkPlace(){const sym=$('#tkSym').value.trim().toUpperCase();if(!S.bySym[sym]){toast('Unknown symbol');return}const o={sym,side:$('#tkSide').value,qty:+$('#tkQty').value,type:$('#tkType').value,price:$('#tkPx').value,product:$('#tkProd').value,sl:+$('#tkSl').value,tp:+$('#tkTp').value,strategy:'manual'};S._tkSym=sym;
    const go_=()=>placeOrder(o).then(()=>renderAlgo());if(S.algo.live&&S.bridge.ok)askConfirm(`<div class="h3">Confirm LIVE order</div><div>${o.side} ${o.qty} × ${esc(sym)} ${o.type}${o.type==='LIMIT'?' @ '+esc(o.price):''} (${o.product}) via ${esc(S.bridge.broker)}</div>`,go_);else go_()},
@@ -1311,7 +1397,7 @@ document.addEventListener('change',e=>{const t=e.target;
  else if(t.id==='fFund'){const f=t.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const msg=importFund(r.result);computeAll();updateMode();$('#impMsg').textContent=msg};r.readAsText(f)}
 });
 $('#search').addEventListener('change',e=>{const v=e.target.value.trim().toUpperCase();const s=S.bySym[v]||S.uni.find(x=>x.name.toUpperCase().includes(v));if(s){openSym(s.sym);e.target.value=''}});
-$('#search').addEventListener('keydown',e=>{if(e.key==='Enter'){e.target.dispatchEvent(new Event('change'))}});
+$('#enqQ')&&0;$('#search').addEventListener('keydown',e=>{if(e.key==='Enter'){e.target.dispatchEvent(new Event('change'))}});
 $('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
 let rsT;window.addEventListener('resize',()=>{clearTimeout(rsT);rsT=setTimeout(()=>render(),150)});
 window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(h&&h!==S.tab)go(h,false)});

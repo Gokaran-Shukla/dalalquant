@@ -7,11 +7,34 @@
   "max_order_value": 200000,
   "risk_free": 0.065,
   "yahoo_fallback": true,
-  "allowed_origins": ["https://gokaran-shukla.github.io", "http://localhost:8000", "http://127.0.0.1:8000", "null"],
-
-  "zerodha": { "api_key": "", "api_secret": "" },
-  "fyers":   { "client_id": "", "secret_key": "", "redirect_uri": "http://127.0.0.1:8765/callback/fyers" },
-  "dhan":    { "client_id": "", "access_token": "" },
-  "angel":   { "api_key": "", "client_code": "", "pin": "", "totp_secret": "" },
-  "groww":   { "access_token": "" }
+  "allowed_origins": [
+    "https://gokaran-shukla.github.io",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    "null"
+  ],
+  "zerodha": {
+    "api_key": "",
+    "api_secret": ""
+  },
+  "fyers": {
+    "client_id": "",
+    "secret_key": "",
+    "redirect_uri": "http://127.0.0.1:8765/callback/fyers"
+  },
+  "dhan": {
+    "client_id": "",
+    "access_token": ""
+  },
+  "angel": {
+    "api_key": "",
+    "client_code": "",
+    "pin": "",
+    "totp_secret": ""
+  },
+  "groww": {
+    "access_token": ""
+  },
+  "anthropic_api_key": "",
+  "anthropic_model": "claude-sonnet-5-5"
 }

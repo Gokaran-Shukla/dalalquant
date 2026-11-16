@@ -813,6 +813,96 @@ def news():
         return {"items": _NEWS["items"]}
 
 
+# ---- company profile, events, news (yfinance + Google News RSS) ---------------
+_CCACHE: dict[str, tuple[float, dict]] = {}
+
+
+@app.get("/company", dependencies=[Depends(auth)])
+def company(symbol: str):
+    if symbol in _CCACHE and time.time() - _CCACHE[symbol][0] < 3 * 3600:
+        return _CCACHE[symbol][1]
+    import urllib.parse
+    import feedparser
+    import yfinance as yf
+    tk = yf.Ticker(yahoo_symbol(symbol))
+    info = {}
+    try:
+        info = tk.info or {}
+    except Exception:
+        pass
+    events = []
+    try:
+        cal = tk.calendar or {}
+        if isinstance(cal, dict):
+            for k in ("Earnings Date", "Ex-Dividend Date", "Dividend Date"):
+                v = cal.get(k)
+                if v:
+                    vals = v if isinstance(v, list) else [v]
+                    events.append({"type": k.replace(" Date", ""), "date": ", ".join(str(x)[:10] for x in vals), "detail": "(scheduled)"})
+    except Exception:
+        pass
+    try:
+        acts = tk.actions
+        if acts is not None and not acts.empty:
+            for idx, r in acts.tail(8).iloc[::-1].iterrows():
+                if r.get("Dividends", 0):
+                    events.append({"type": "Dividend", "date": idx.strftime("%Y-%m-%d"), "detail": f"{r['Dividends']:.2f} per share"})
+                if r.get("Stock Splits", 0):
+                    events.append({"type": "Split/bonus", "date": idx.strftime("%Y-%m-%d"), "detail": f"ratio {r['Stock Splits']:g}"})
+    except Exception:
+        pass
+    name = info.get("shortName") or info.get("longName") or symbol
+    q = urllib.parse.quote(f'"{name}" stock' if is_us(symbol) else f'"{name}" share OR stock OR results')
+    region = "hl=en-US&gl=US&ceid=US:en" if is_us(symbol) else "hl=en-IN&gl=IN&ceid=IN:en"
+    news = []
+    try:
+        f = feedparser.parse(f"https://news.google.com/rss/search?q={q}&{region}")
+        for e in f.entries[:15]:
+            ts = e.get("published_parsed")
+            news.append({"title": e.get("title"), "link": e.get("link"), "source": (e.get("source") or {}).get("title", "Google News"),
+                         "time": dt.datetime(*ts[:6], tzinfo=dt.timezone.utc).isoformat() if ts else None})
+    except Exception as ex:
+        log.warning("company news failed: %s", ex)
+    out = {"name": name, "summary": info.get("longBusinessSummary"), "industry": info.get("industry"), "sector": info.get("sector"),
+           "website": info.get("website"), "employees": info.get("fullTimeEmployees"), "city": info.get("city"),
+           "officers": [{"name": o.get("name"), "title": o.get("title")} for o in (info.get("companyOfficers") or [])[:5]],
+           "events": events, "news": news}
+    _CCACHE[symbol] = (time.time(), out)
+    return out
+
+
+class AskIn(BaseModel):
+    symbol: str
+    question: str
+    context: str
+
+
+@app.post("/ask", dependencies=[Depends(auth)])
+def ask(a: AskIn):
+    """Company Q&A through the Anthropic Messages API. Needs "anthropic_api_key" in config.json."""
+    import urllib.request
+    key = cfg("anthropic_api_key") or os.environ.get("ANTHROPIC_API_KEY")
+    if not key:
+        raise HTTPException(400, "Set anthropic_api_key in bridge/config.json (or ANTHROPIC_API_KEY) to use the AI analyst.")
+    model = cfg("anthropic_model", "claude-sonnet-5-5")
+    system = ("You are an equity research analyst for Indian (NSE/BSE) and US markets. Answer the user's question about the company "
+              "using the JSON dossier provided (prices, fundamentals, valuation, technicals, scenarios, drivers, risks, events, headlines) "
+              "and your general knowledge of the business. Be specific and quantitative, structure the answer with short headings and bullets, "
+              "give entry/exit levels when asked, separate facts in the dossier from your own judgement, flag if data_source says 'sim' "
+              "(simulated demo data), and end with one line noting this is analysis, not investment advice.")
+    body = json.dumps({"model": model, "max_tokens": 1500, "system": system,
+                       "messages": [{"role": "user", "content": f"Dossier:\n{a.context[:60000]}\n\nQuestion: {a.question}"}]}).encode()
+    req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=body, method="POST",
+                                 headers={"x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=110) as r:
+            resp = json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        raise HTTPException(e.code, e.read().decode()[:300])
+    text = "".join(b.get("text", "") for b in resp.get("content", []) if b.get("type") == "text")
+    return {"answer": text, "model": resp.get("model", model)}
+
+
 # ---- daily broker logins ------------------------------------------------------
 @app.get("/login/zerodha")
 def login_zerodha():

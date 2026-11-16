@@ -11,6 +11,7 @@ DalalQuant is a single-page terminal covering investing, trading and algo tradin
 | **India Markets** | Daily written briefing; all major NSE/BSE indices with sparklines; derived India VIX; breadth; sector heatmap; top gainers and losers; **Opportunities** (strong businesses well below their highs), which also pop up each time you open the terminal |
 | **World · US · Commodities** | US, Europe, Asia-Pacific and Middle East indices; gold, silver, crude, gas and metals; INR crosses and DXY; US and India 10-year yields; crypto; rule-based **global cues for India** with the sectors each move affects; US stock rankings and sector heatmap |
 | **News & Events** | Live RSS headlines (through the bridge), auto-tagged by topic (Fed, RBI, crude, tariffs, geopolitics, earnings, FII flows…) with impact, tone, affected sectors and mentioned stocks; ⚡ flash bar for high-impact news; recurring market-moving events |
+| **Ask · Company Enquiry** | Type any company to get one dossier covering: a plain-English summary; an **investor call** (ACCUMULATE / HOLD / WAIT / EXIT) and a trader signal; entry zone, stop-loss, targets and exit triggers; past track record vs the index; present valuation and quality; **3-year bear/base/bull scenarios** with implied prices; growth drivers and risks; company events (estimated results date, plus dividends, splits and earnings dates through the bridge); company news; and an **AI analyst** you can ask free-form questions (through the bridge with your Anthropic API key) |
 | **Rankings** | Every stock in every index, **best first**, by DQ Score (Trend · Momentum · Valuation · Quality · Growth · Risk; adjustable weights); BUY ZONE / HOLD / WAIT / EXIT signals; filters; watchlist; CSV export |
 | **Screener** | Screener.in-style query language (`ROE > 15 AND Sales growth 3Years > 10 AND Debt to equity < 0.5`), 45+ fields, 12 preset screens, saved screens, custom columns |
 | **Company** | Candlestick chart (SMA, EMA, Bollinger, Supertrend, RSI, MACD, volume); get-in / get-out decision panel with a checklist and an ATR-based trade plan; quarterly results, P&L, balance sheet, cash flow, ratios, shareholding, peers and market share, documents; **intrinsic value** (DCF, Graham number and formula, sector P/E, justified P/B); text report |
@@ -34,6 +35,7 @@ cd bridge
 python -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
 pip install -r requirements.txt                        # then also install your broker's SDK (see file)
 cp config.example.json config.json                     # add your API keys; keep "allow_live_orders": false at first
+                                                       # optional: "anthropic_api_key" enables the AI analyst
 python bridge.py                                       # → http://127.0.0.1:8765
 ```
 
