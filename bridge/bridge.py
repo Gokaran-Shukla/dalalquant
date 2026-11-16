@@ -42,7 +42,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel
@@ -172,6 +172,9 @@ class Provider:
     def optionchain(self, underlying: str, expiry: str | None) -> dict:
         raise HTTPException(501, f"{self.name}: option chain not implemented")
 
+    def intraday(self, symbol: str, interval: int, days: int) -> list[dict]:
+        return YahooProvider().intraday(symbol, interval, days)
+
     def order(self, o: "OrderIn") -> dict:
         raise HTTPException(501, f"{self.name}: order placement not supported")
 
@@ -217,6 +220,15 @@ class YahooProvider(Provider):
         df = df.dropna(subset=["Close"])
         return [{"t": i.strftime("%Y-%m-%d"), "o": float(r.Open), "h": float(r.High), "l": float(r.Low), "c": float(r.Close),
                  "v": float(r.Volume or 0)} for i, r in df.tail(days).iterrows()]
+
+    def intraday(self, symbol, interval, days):
+        import yfinance as yf
+        iv = {1: "1m", 2: "2m", 5: "5m", 15: "15m", 30: "30m", 60: "60m"}.get(interval, "5m")
+        period = f"{min(days, 7 if iv == '1m' else 59)}d"
+        df = yf.Ticker(yahoo_symbol(symbol)).history(period=period, interval=iv)
+        df = df.dropna(subset=["Close"])
+        return [{"t": i.tz_convert("Asia/Kolkata").strftime("%Y-%m-%d %H:%M") if i.tzinfo else i.strftime("%Y-%m-%d %H:%M"), "o": float(r.Open), "h": float(r.High),
+                 "l": float(r.Low), "c": float(r.Close), "v": float(r.Volume or 0)} for i, r in df.iterrows()]
 
 
 class ZerodhaProvider(Provider):
@@ -269,6 +281,16 @@ class ZerodhaProvider(Provider):
         frm = to - dt.timedelta(days=int(days * 1.5))
         rows = self.kite.historical_data(tok, frm, to, "day")
         return [{"t": r["date"].strftime("%Y-%m-%d"), "o": r["open"], "h": r["high"], "l": r["low"], "c": r["close"], "v": r["volume"]} for r in rows][-days:]
+
+    def intraday(self, symbol, interval, days):
+        if is_us(symbol):
+            return YahooProvider().intraday(symbol, interval, days)
+        exch, ts = (INDEX_ALIASES[symbol]["zerodha"].split(":", 1) if symbol in INDEX_ALIASES else ("NSE", symbol))
+        tok = next((x["instrument_token"] for x in self._instruments(exch) if x["tradingsymbol"] == ts), None)
+        iv = {1: "minute", 3: "3minute", 5: "5minute", 15: "15minute", 30: "30minute", 60: "60minute"}.get(interval, "5minute")
+        to = dt.datetime.now()
+        rows = self.kite.historical_data(tok, to - dt.timedelta(days=days + 3), to, iv)
+        return [{"t": r["date"].strftime("%Y-%m-%d %H:%M"), "o": r["open"], "h": r["high"], "l": r["low"], "c": r["close"], "v": r["volume"]} for r in rows]
 
     def optionchain(self, underlying, expiry):
         name = INDEX_ALIASES.get(underlying, {}).get("fo", underlying)
@@ -375,6 +397,14 @@ class FyersProvider(Provider):
             if b["t"] not in seen:
                 seen.add(b["t"]); out.append(b)
         return out[-days:]
+
+    def intraday(self, symbol, interval, days):
+        if is_us(symbol):
+            return YahooProvider().intraday(symbol, interval, days)
+        to = dt.date.today()
+        r = self.f.history(data={"symbol": self._sym(symbol), "resolution": str(interval), "date_format": "1",
+                                 "range_from": (to - dt.timedelta(days=days + 3)).isoformat(), "range_to": to.isoformat(), "cont_flag": "1"})
+        return [{"t": dt.datetime.fromtimestamp(c[0]).strftime("%Y-%m-%d %H:%M"), "o": c[1], "h": c[2], "l": c[3], "c": c[4], "v": c[5]} for c in r.get("candles", [])]
 
     def optionchain(self, underlying, expiry):
         r = self.f.optionchain(data={"symbol": self._sym(underlying), "strikecount": 15, "timestamp": expiry or ""})
@@ -525,6 +555,15 @@ class AngelProvider(Provider):
         frm = to - dt.timedelta(days=int(days * 1.5))
         r = self.a.getCandleData({"exchange": "NSE", "symboltoken": tok, "interval": "ONE_DAY", "fromdate": frm.strftime("%Y-%m-%d 09:15"), "todate": to.strftime("%Y-%m-%d 15:30")})
         return [{"t": c[0][:10], "o": c[1], "h": c[2], "l": c[3], "c": c[4], "v": c[5]} for c in (r.get("data") or [])][-days:]
+
+    def intraday(self, symbol, interval, days):
+        tok = angel_scrips().get(symbol)
+        if not tok:
+            return YahooProvider().intraday(symbol, interval, days)
+        iv = {1: "ONE_MINUTE", 3: "THREE_MINUTE", 5: "FIVE_MINUTE", 15: "FIFTEEN_MINUTE", 30: "THIRTY_MINUTE", 60: "ONE_HOUR"}.get(interval, "FIVE_MINUTE")
+        to = dt.datetime.now()
+        r = self.a.getCandleData({"exchange": "NSE", "symboltoken": tok, "interval": iv, "fromdate": (to - dt.timedelta(days=days + 3)).strftime("%Y-%m-%d 09:15"), "todate": to.strftime("%Y-%m-%d %H:%M")})
+        return [{"t": c[0][:16].replace("T", " "), "o": c[1], "h": c[2], "l": c[3], "c": c[4], "v": c[5]} for c in (r.get("data") or [])]
 
     def order(self, o):
         tok = angel_scrips().get(o.symbol)
@@ -803,6 +842,43 @@ def _start_scheduler():
             name = (cfg("force_broker") or cfg("broker", "yahoo")).lower()
             return PROVIDERS[name]()
         notify.Scheduler(cfg, prov, build_brief, every=int(cfg("alert_poll_seconds", 180))).start()
+
+
+# ---- intraday candles + live tick stream -------------------------------------
+@app.get("/intraday", dependencies=[Depends(auth)])
+def intraday(symbol: str, interval: int = 5, days: int = 5, p: Provider = Depends(provider)):
+    return {"bars": p.intraday(symbol, interval, min(days, 30))}
+
+
+@app.websocket("/ws/ticks")
+async def ws_ticks(ws: WebSocket):
+    """Streams {sym: {ltp, volume, ...}} every `every` seconds for ?symbols=A,B (token via ?token= if bridge_token set)."""
+    import asyncio
+    need = cfg("bridge_token")
+    if need and ws.query_params.get("token") != need:
+        await ws.close(code=4401)
+        return
+    await ws.accept()
+    syms = [s for s in (ws.query_params.get("symbols") or "").split(",") if s][:200]
+    every = max(1.0, float(ws.query_params.get("every", 2)))
+    name = (cfg("force_broker") or ws.query_params.get("broker") or cfg("broker", "yahoo")).lower()
+    try:
+        prov = PROVIDERS[name]()
+        while True:
+            try:
+                q = await asyncio.get_event_loop().run_in_executor(None, prov.quote, syms)
+                await ws.send_json({"t": dt.datetime.now().isoformat(timespec="seconds"), "quotes": q})
+            except Exception as e:
+                await ws.send_json({"error": str(e)})
+            await asyncio.sleep(every)
+    except WebSocketDisconnect:
+        return
+    except Exception as e:
+        try:
+            await ws.send_json({"error": str(e)})
+            await ws.close()
+        except Exception:
+            pass
 
 
 # ---- NSE public data ------------------------------------------------------------
