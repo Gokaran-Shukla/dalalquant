@@ -3,6 +3,7 @@ uvicorn>=0.29
 pydantic>=2
 yfinance>=0.2.50
 feedparser>=6.0
+requests>=2.31
 # install only the broker SDK(s) you use:
 # kiteconnect          # Zerodha
 # fyers-apiv3          # Fyers

@@ -49,6 +49,7 @@ Next, open the site and go to **Algo & Brokers**. Pick your broker, keep the URL
 - Click **Load live history** → **Load fundamentals**, and tick **Live quotes**.
 - For a Zerodha or Fyers daily login, open `http://127.0.0.1:8765/login/zerodha` (or `/login/fyers`) once a day.
 - Start with `"broker": "yahoo"`. It needs no keys and gives delayed data, which is a good way to check that everything works.
+- **NSE official end-of-day data:** choose *NSE official EOD* as the source and click **Sync NSE files** (Data & Settings). The bridge downloads ~3 years of NSE bhavcopies (prices + delivery %) and 60 days of F&O bhavcopies into `bridge/cache/`, adjusts for splits/bonuses, and powers: delivery-% analysis, FII/DII daily flows, bulk/block deals, insider (SEBI PIT) trades, promoter pledges, OI build-up and rollover. Requests are throttled and cached; this is for personal use, so check NSE's terms of use.
 
 **Safety:**
 - API secrets stay in `config.json` on your machine. It is git-ignored.

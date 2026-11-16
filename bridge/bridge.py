@@ -14,6 +14,7 @@ and broker API secrets must never sit inside a public web page.  The bridge keep
 on your machine and exposes one small REST contract for every broker.
 
 Providers (set "broker" in config.json, or send header X-Broker):
+    nse      – official NSE end-of-day bhavcopy files (with delivery %), cached locally; POST /nse/sync first
     yahoo    – Yahoo Finance via yfinance: delayed quotes + history, no trading, no keys needed
     zerodha  – Kite Connect (pip install kiteconnect)
     fyers    – Fyers API v3 (pip install fyers-apiv3)
@@ -585,7 +586,23 @@ class GrowwProvider(Provider):
         return self.g.get_available_margin_details()
 
 
-PROVIDERS = {"yahoo": YahooProvider, "zerodha": ZerodhaProvider, "fyers": FyersProvider, "dhan": DhanProvider, "angel": AngelProvider, "groww": GrowwProvider}
+class NseProvider(Provider):
+    """Official NSE end-of-day files (bhavcopy with delivery %), cached locally. Run /nse/sync first."""
+    name = "nse"
+
+    def quote(self, symbols, kind="equity"):
+        import nse_data
+        return nse_data.quotes([s for s in symbols if not is_us(s) and s not in INDEX_ALIASES])
+
+    def history(self, symbol, days):
+        import nse_data
+        if is_us(symbol) or symbol in INDEX_ALIASES:
+            return YahooProvider().history(symbol, days)
+        bars = nse_data.history(symbol, days)
+        return bars or YahooProvider().history(symbol, days)
+
+
+PROVIDERS = {"nse": NseProvider, "yahoo": YahooProvider, "zerodha": ZerodhaProvider, "fyers": FyersProvider, "dhan": DhanProvider, "angel": AngelProvider, "groww": GrowwProvider}
 
 
 # --------------------------------------------------------------------------- app
@@ -700,6 +717,75 @@ def holdings(p: Provider = Depends(provider)):
 @app.get("/funds", dependencies=[Depends(auth)])
 def funds(p: Provider = Depends(provider)):
     return {"funds": p.funds()}
+
+
+# ---- NSE public data ------------------------------------------------------------
+@app.post("/nse/sync", dependencies=[Depends(auth)])
+def nse_sync(days: int = 760, fo_days: int = 60):
+    import nse_data
+    threading.Thread(target=nse_data.sync, args=(days, fo_days), daemon=True).start()
+    return {"started": True, **nse_data.STATUS}
+
+
+@app.get("/nse/status", dependencies=[Depends(auth)])
+def nse_status():
+    import nse_data
+    n = len(list((nse_data.CACHE / "eq").glob("*.json")))
+    return {**nse_data.STATUS, "eq_days_cached": n, "fo_days_cached": len(list((nse_data.CACHE / "fo").glob("*.json")))}
+
+
+@app.get("/nse/fiidii", dependencies=[Depends(auth)])
+def nse_fiidii():
+    import nse_data
+    return nse_data.fii_dii()
+
+
+@app.get("/nse/deals", dependencies=[Depends(auth)])
+def nse_deals():
+    import nse_data
+    return {"deals": nse_data.deals()}
+
+
+@app.get("/nse/insider", dependencies=[Depends(auth)])
+def nse_insider(symbol: str | None = None, days: int = 90):
+    import nse_data
+    return {"rows": nse_data.insider(symbol, days)}
+
+
+@app.get("/nse/pledge", dependencies=[Depends(auth)])
+def nse_pledge():
+    import nse_data
+    return {"rows": nse_data.pledges()}
+
+
+@app.get("/nse/delivery", dependencies=[Depends(auth)])
+def nse_delivery(symbol: str, days: int = 120):
+    import nse_data
+    return {"bars": [{"t": b["t"], "d": b.get("d"), "v": b["v"], "c": b["c"]} for b in nse_data.history(symbol, days, adjust=False)]}
+
+
+@app.get("/fo/buildup", dependencies=[Depends(auth)])
+def fo_buildup():
+    import nse_data
+    return {"rows": nse_data.fo_buildup()}
+
+
+@app.get("/fo/rollover", dependencies=[Depends(auth)])
+def fo_rollover(symbol: str):
+    import nse_data
+    return nse_data.rollover(symbol) or {}
+
+
+@app.get("/fo/participants", dependencies=[Depends(auth)])
+def fo_participants():
+    import nse_data
+    return nse_data.participant_oi() or {}
+
+
+@app.get("/fo/ivhistory", dependencies=[Depends(auth)])
+def fo_ivhistory(symbol: str, days: int = 60):
+    import nse_data
+    return {"rows": nse_data.option_history(symbol, days)}
 
 
 # ---- tradebook for the P&L report --------------------------------------------

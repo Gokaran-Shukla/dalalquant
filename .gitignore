@@ -3,3 +3,5 @@ bridge/.tokens.json
 __pycache__/
 *.pyc
 .venv/
+bridge/cache/
+.pytest_cache/
