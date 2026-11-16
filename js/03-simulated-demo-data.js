@@ -20,7 +20,7 @@ function genSim(s){
   const e=Math.max(0.01,em+0.015*g());const npm=Math.max(-0.08,nm+0.012*g());const np=rev*npm;
   return {p:L.label,fy:L.fy,qn:L.q,rev:r2(rev),ebitda:r2(rev*e),np:r2(np),fcf:fin?null:r2(np*(fcfr+0.25*g()))}});
  const npTTM=q.slice(-4).reduce((a,x)=>a+x.np,0);const peT=Math.max(6,9+R()*50+ga*40);
- const shares=Math.max(0.5,npTTM*peT/bars[n-1].c);
+ const shares=Math.max(0.5,npTTM*peT/mean(bars.slice(0,60).map(b=>b.c)));// shares fixed from early prices so demo fundamentals never "know" future returns
  q.forEach(x=>x.eps=r2(x.np/shares));
  const roeT=fin?0.08+R()*0.14:0.07+R()*0.25;const equity=Math.max(npTTM/roeT,1);
  const debt=fin?equity*(4+R()*6):equity*R()*R()*1.6;const cash=equity*(0.04+R()*0.3);
