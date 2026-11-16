@@ -1,0 +1,73 @@
+# DalalQuant — Indian markets terminal
+
+**Live site:** https://gokaran-shukla.github.io/dalalquant
+
+DalalQuant is a single-page terminal covering investing, trading and algo trading on NSE/BSE. It also includes US stocks, world indices, commodities, FX, bonds and crypto. Everything runs in your browser. The small optional **bridge** (`bridge/bridge.py`) adds real-time data, news and order routing through your own broker account.
+
+## What's inside
+
+| Section | Highlights |
+|---|---|
+| **India Markets** | Daily written briefing; all major NSE/BSE indices with sparklines; derived India VIX; breadth; sector heatmap; top gainers and losers; **Opportunities** (strong businesses well below their highs), which also pop up each time you open the terminal |
+| **World · US · Commodities** | US, Europe, Asia-Pacific and Middle East indices; gold, silver, crude, gas and metals; INR crosses and DXY; US and India 10-year yields; crypto; rule-based **global cues for India** with the sectors each move affects; US stock rankings and sector heatmap |
+| **News & Events** | Live RSS headlines (through the bridge), auto-tagged by topic (Fed, RBI, crude, tariffs, geopolitics, earnings, FII flows…) with impact, tone, affected sectors and mentioned stocks; ⚡ flash bar for high-impact news; recurring market-moving events |
+| **Rankings** | Every stock in every index, **best first**, by DQ Score (Trend · Momentum · Valuation · Quality · Growth · Risk; adjustable weights); BUY ZONE / HOLD / WAIT / EXIT signals; filters; watchlist; CSV export |
+| **Screener** | Screener.in-style query language (`ROE > 15 AND Sales growth 3Years > 10 AND Debt to equity < 0.5`), 45+ fields, 12 preset screens, saved screens, custom columns |
+| **Company** | Candlestick chart (SMA, EMA, Bollinger, Supertrend, RSI, MACD, volume); get-in / get-out decision panel with a checklist and an ATR-based trade plan; quarterly results, P&L, balance sheet, cash flow, ratios, shareholding, peers and market share, documents; **intrinsic value** (DCF, Graham number and formula, sector P/E, justified P/B); text report |
+| **Strategy Lab** | 9 strategies backtested with Indian costs (STT, exchange fees, SEBI fees, stamp duty, GST); stop-loss and target exits; equity and drawdown charts; trade list; parameter-grid optimiser; batch run across a whole index |
+| **F&O · Options** | Option chain (live through the bridge, otherwise theoretical Black-Scholes) with OI, ΔOI, IV, Δ, PCR and max pain; 15 strategy presets (straddles, **strangles**, iron condor and butterfly, spreads, ratio spread, jade lizard, covered call, protective put…); payoff at expiry and today; Greeks; breakevens; single-option and implied-volatility calculator |
+| **Portfolio** | Holdings with P&L, weights, signals and concentration warnings; sync from broker; SIP calculator with annual step-up; XIRR; capital-gains tax estimate |
+| **Algo & Brokers** | Connect Zerodha, Dhan, Groww, Angel One or Fyers (or Yahoo for delayed data); rules engine; paper and live trading; auto-trading loop; risk limits and a kill switch; order ticket; positions and order blotter; activity log |
+| **Data & Settings** | Import price CSVs (NSE / Yahoo format) and fundamentals CSVs; add symbols; settings for charges, tax, lot sizes and valuation |
+
+## Data: demo vs live
+
+The site works offline using **clearly labelled simulated data** (yellow `SIM` badges). It never shows invented news. For real data, use one of these:
+
+1. **Bridge (recommended).** Real-time quotes, history, option chains and orders through your broker. Fundamentals, world markets and news come from yfinance and public RSS feeds.
+2. **CSV import.** Load price history and quarterly fundamentals yourself (Data & Settings).
+
+### Running the bridge
+
+```bash
+cd bridge
+python -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
+pip install -r requirements.txt                        # then also install your broker's SDK (see file)
+cp config.example.json config.json                     # add your API keys; keep "allow_live_orders": false at first
+python bridge.py                                       # → http://127.0.0.1:8765
+```
+
+Next, open the site and go to **Algo & Brokers**. Pick your broker, keep the URL as `http://127.0.0.1:8765`, and click **Connect**. Then:
+- Click **Load live history** → **Load fundamentals**, and tick **Live quotes**.
+- For a Zerodha or Fyers daily login, open `http://127.0.0.1:8765/login/zerodha` (or `/login/fyers`) once a day.
+- Start with `"broker": "yahoo"`. It needs no keys and gives delayed data, which is a good way to check that everything works.
+
+**Safety:**
+- API secrets stay in `config.json` on your machine. It is git-ignored.
+- Live orders are blocked until you set `"allow_live_orders": true`.
+- The page asks you to confirm before every live order and before starting live auto-trading.
+- Risk limits and a kill switch apply to both paper and live trading.
+
+**Broker adapters:** these follow each SDK's published interface but have not been tested against live accounts. Verify them with small orders first. Zerodha and Fyers have the most complete coverage, including option chains.
+
+## Methodology
+
+- **DQ Score** is a weighted average of six components:
+  - Trend: price vs the 50- and 200-day moving averages
+  - Momentum: RSI and MACD
+  - Valuation: upside to the median intrinsic value, plus P/E vs the sector median
+  - Quality: ROE, debt/equity and margins
+  - Growth: 3-year sales and profit CAGR, plus latest-quarter YoY
+  - Risk: volatility and drawdown
+- **Opportunity** means all of the following:
+  - quality ≥ 60, growth ≥ 50, and profitable
+  - at least 15% below the 52-week high, or down 8% or more over 3 months
+  - trading below intrinsic value
+
+These are mechanical screens on the data loaded. **They are not investment advice.** Charge, tax and lot-size defaults reflect rules as of 2025–26 and can be edited. Index constituent lists change at NSE/BSE reviews.
+
+## Files
+
+- `index.html`: the whole terminal (no build step, no dependencies)
+- `bridge/bridge.py`: FastAPI bridge (REST contract documented in the Algo tab)
+- `bridge/config.example.json`, `bridge/requirements.txt`

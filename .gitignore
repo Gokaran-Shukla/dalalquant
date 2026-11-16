@@ -1,0 +1,5 @@
+bridge/config.json
+bridge/.tokens.json
+__pycache__/
+*.pyc
+.venv/

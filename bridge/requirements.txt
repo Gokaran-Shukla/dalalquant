@@ -1,0 +1,11 @@
+fastapi>=0.110
+uvicorn>=0.29
+pydantic>=2
+yfinance>=0.2.50
+feedparser>=6.0
+# install only the broker SDK(s) you use:
+# kiteconnect          # Zerodha
+# fyers-apiv3          # Fyers
+# dhanhq               # Dhan
+# smartapi-python pyotp  # Angel One
+# growwapi             # Groww
