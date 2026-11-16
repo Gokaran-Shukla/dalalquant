@@ -1,0 +1,23 @@
+# Cloud bridge: DalalQuant bridge behind Caddy (automatic HTTPS).
+# 1. Point a DNS name (e.g. bridge.example.com) at your VM.
+# 2. Put bridge/config.json next to this file with a strong "bridge_token" and
+#    "allowed_origins": ["https://gokaran-shukla.github.io"].
+# 3. DOMAIN=bridge.example.com docker compose up -d
+services:
+  bridge:
+    build: { context: ../bridge, args: { EXTRA: "" } }
+    restart: unless-stopped
+    environment: [ "DQ_CONFIG=/data/config.json" ]
+    volumes:
+      - ./config.json:/data/config.json:ro
+      - bridge-cache:/app/cache
+    expose: [ "8765" ]
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: [ "80:80", "443:443" ]
+    environment: [ "DOMAIN=${DOMAIN}" ]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+volumes: { bridge-cache: {}, caddy-data: {} }

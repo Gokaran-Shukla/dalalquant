@@ -81,8 +81,37 @@ Next, open the site and go to **Algo & Brokers**. Pick your broker, keep the URL
 
 These are mechanical screens on the data loaded. **They are not investment advice.** Charge, tax and lot-size defaults reflect rules as of 2025–26 and can be edited. Index constituent lists change at NSE/BSE reviews.
 
+## Running the bridge in the cloud (use the terminal live from your phone)
+
+`deploy/` contains a Docker Compose setup with Caddy (automatic HTTPS):
+
+```bash
+# on a small Linux VM with Docker, after pointing bridge.example.com at it
+git clone https://github.com/Gokaran-Shukla/dalalquant && cd dalalquant/deploy
+cp ../bridge/config.example.json config.json   # set a long random "bridge_token", your broker keys,
+                                               # "allowed_origins": ["https://gokaran-shukla.github.io"]
+DOMAIN=bridge.example.com docker compose up -d
+```
+
+Then in **Algo & Brokers** set the bridge URL to `https://bridge.example.com` and paste the token.
+
+**Security:**
+- Never expose the bridge without a `bridge_token`.
+- Keep `allow_live_orders` off until you have tested.
+- Some brokers restrict API use from servers or require a static IP; check your broker's API terms.
+
+## Development
+
+- The terminal is plain HTML/CSS/JS with no build step: `index.html`, `css/dalalquant.css` and `js/NN-*.js`. The modules are loaded in order and share one global namespace.
+- Tests:
+  - `npm install && npm test` loads the real page in jsdom. It checks indicators, OLS, Black-Scholes parity and implied volatility, XIRR, bond maths, FIFO P&L, the screener parser, backtest bookkeeping, GARCH and the forecast engine.
+  - `python -m pytest tests` checks the NSE file parsers, split adjustment, OI build-up and participant OI.
+- GitHub Actions (`.github/workflows/ci.yml`) runs both test suites on every push.
+
 ## Files
 
-- `index.html`: the whole terminal (no build step, no dependencies)
+- `index.html`, `css/`, `js/`: the terminal (38 ordered modules, no build step)
+- `bridge/nse_data.py`: NSE bhavcopy, F&O, FII/DII, deals, insider and pledge loaders; `bridge/notify.py`: Telegram/email/WhatsApp and the alert/brief scheduler
+- `tests/`: JS (jsdom) and Python unit tests · `deploy/`: Docker + Caddy cloud bridge · `.github/workflows/ci.yml`: CI
 - `bridge/bridge.py`: FastAPI bridge (REST contract documented in the Algo tab)
 - `bridge/config.example.json`, `bridge/requirements.txt`

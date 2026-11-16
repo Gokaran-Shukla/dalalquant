@@ -1,0 +1,7 @@
+{
+  "name": "dalalquant",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test tests/js/*.test.mjs" },
+  "devDependencies": { "jsdom": "^24.0.0" }
+}
