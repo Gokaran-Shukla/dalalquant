@@ -180,6 +180,9 @@ class Provider:
     def order(self, o: "OrderIn") -> dict:
         raise HTTPException(501, f"{self.name}: order placement not supported")
 
+    def gtt_oco(self, symbol: str, qty: int, sl: float, tp: float, ltp: float, side: str, product: str) -> dict:
+        raise HTTPException(501, f"{self.name}: GTT/OCO not available through this adapter — place the bracket in your broker app")
+
     def positions(self) -> list:
         return []
 
@@ -340,6 +343,14 @@ class ZerodhaProvider(Provider):
 
     def positions(self):
         return [{"symbol": p["tradingsymbol"], "qty": p["quantity"], "avg_price": p["average_price"], "pnl": p["pnl"]} for p in self.kite.positions()["net"]]
+
+    def gtt_oco(self, symbol, qty, sl, tp, ltp, side, product):
+        k = self.kite
+        exit_side = k.TRANSACTION_TYPE_SELL if side == "LONG" else k.TRANSACTION_TYPE_BUY
+        orders = [{"exchange": "NSE", "tradingsymbol": symbol, "transaction_type": exit_side, "quantity": int(qty), "order_type": k.ORDER_TYPE_LIMIT,
+                   "product": {"CNC": k.PRODUCT_CNC, "MIS": k.PRODUCT_MIS, "NRML": k.PRODUCT_NRML}.get(product, k.PRODUCT_CNC), "price": float(px)} for px in (sl, tp)]
+        gid = k.place_gtt(trigger_type=k.GTT_TYPE_OCO, tradingsymbol=symbol, exchange="NSE", trigger_values=[float(sl), float(tp)], last_price=float(ltp), orders=orders)
+        return {"status": "GTT_PLACED", "id": gid}
 
     def holdings(self):
         return [{"symbol": h["tradingsymbol"], "qty": h["quantity"] + h.get("t1_quantity", 0), "avg_price": h["average_price"]} for h in self.kite.holdings()]
@@ -743,6 +754,25 @@ def order(o: OrderIn, p: Provider = Depends(provider)):
         raise HTTPException(403, "order value above max_order_value in config.json")
     log.info("ORDER %s %s %s x%s %s", p.name, o.side, o.symbol, o.qty, o.type)
     return p.order(o)
+
+
+class GttIn(BaseModel):
+    symbol: str
+    qty: float
+    sl: float
+    tp: float
+    ltp: float
+    side: str = "LONG"
+    product: str = "CNC"
+
+
+@app.post("/gtt", dependencies=[Depends(auth)])
+def gtt(g: GttIn, p: Provider = Depends(provider)):
+    if not cfg("allow_live_orders", False):
+        raise HTTPException(403, "Live orders are disabled in config.json")
+    if not (g.sl < g.ltp < g.tp) and g.side == "LONG":
+        raise HTTPException(400, "for a long position stop < LTP < target")
+    return p.gtt_oco(g.symbol, int(g.qty), g.sl, g.tp, g.ltp, g.side, g.product)
 
 
 @app.get("/positions", dependencies=[Depends(auth)])
