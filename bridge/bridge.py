@@ -658,7 +658,16 @@ PROVIDERS = {"nse": NseProvider, "yahoo": YahooProvider, "zerodha": ZerodhaProvi
 
 
 # --------------------------------------------------------------------------- app
-app = FastAPI(title="DalalQuant bridge", version="1.0")
+from contextlib import asynccontextmanager
+
+
+@asynccontextmanager
+async def _lifespan(_app):
+    _start_scheduler()          # defined further down; runs once the server is up
+    yield
+
+
+app = FastAPI(title="DalalQuant bridge", version="1.0", lifespan=_lifespan)
 ALLOWED = cfg("allowed_origins", ["https://gokaran-shukla.github.io", "http://localhost:8000", "http://127.0.0.1:8000", "null"])
 _cors = dict(allow_origins=ALLOWED, allow_methods=["*"], allow_headers=["*"], allow_credentials=False)
 try:  # Starlette >= 0.38 handles Chrome Private Network Access itself
@@ -894,7 +903,6 @@ def brief_send(text: str | None = None):
     return {"result": notify.send(cfg, title, body), "preview": body}
 
 
-@app.on_event("startup")
 def _start_scheduler():
     if cfg("scheduler", True):
         import notify
