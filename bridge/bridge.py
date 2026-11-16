@@ -38,6 +38,8 @@ import math
 import os
 import threading
 import time
+import urllib.parse
+import urllib.request
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -879,6 +881,39 @@ async def ws_ticks(ws: WebSocket):
             await ws.close()
         except Exception:
             pass
+
+
+# ---- mutual funds (mfapi.in, AMFI data) · IPOs ---------------------------------
+def _json(url, timeout=30):
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 DalalQuant"})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.loads(r.read())
+
+
+@app.get("/mf/search", dependencies=[Depends(auth)])
+def mf_search(q: str):
+    return {"rows": _json("https://api.mfapi.in/mf/search?q=" + urllib.parse.quote(q))[:50]}
+
+
+@app.get("/mf/nav", dependencies=[Depends(auth)])
+def mf_nav(code: str):
+    d = _json(f"https://api.mfapi.in/mf/{urllib.parse.quote(code)}")
+    rows = []
+    for x in d.get("data", []):
+        try:
+            rows.append({"t": dt.datetime.strptime(x["date"], "%d-%m-%Y").date().isoformat(), "nav": float(x["nav"])})
+        except (KeyError, ValueError):
+            continue
+    rows.sort(key=lambda r: r["t"])
+    return {"meta": d.get("meta", {}), "nav": rows}
+
+
+@app.get("/ipo", dependencies=[Depends(auth)])
+def ipo():
+    import nse_data
+    cur = nse_data._api("ipo-current-issue", ttl=1800) or []
+    up = nse_data._api("all-upcoming-issues?category=ipo", ttl=3600) or []
+    return {"current": cur if isinstance(cur, list) else cur.get("data", []), "upcoming": up if isinstance(up, list) else up.get("data", [])}
 
 
 # ---- NSE public data ------------------------------------------------------------
