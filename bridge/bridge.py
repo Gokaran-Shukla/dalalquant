@@ -961,6 +961,18 @@ def nse_delivery(symbol: str, days: int = 120):
     return {"bars": [{"t": b["t"], "d": b.get("d"), "v": b["v"], "c": b["c"]} for b in nse_data.history(symbol, days, adjust=False)]}
 
 
+@app.get("/nse/announcements", dependencies=[Depends(auth)])
+def nse_announcements(days: int = 30):
+    import nse_data
+    return {"rows": nse_data.announcements(days)}
+
+
+@app.get("/nse/fnoban", dependencies=[Depends(auth)])
+def nse_fnoban():
+    import nse_data
+    return nse_data.fno_ban()
+
+
 @app.get("/fo/buildup", dependencies=[Depends(auth)])
 def fo_buildup():
     import nse_data

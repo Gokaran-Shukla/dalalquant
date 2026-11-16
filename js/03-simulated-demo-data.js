@@ -14,7 +14,7 @@ function genSim(s){
   bars.push({t:S.dates[i],o:r2(o),h:r2(hi),l:r2(lo),c:r2(c),v:Math.round(baseVol*(0.6+R()*0.8)*(1+Math.abs(ret)*25))});p=c;
  }
  {const L=Math.log(bars[n-1].c/bars[0].c),lo=Math.log(0.45),hi=Math.log(3.2);const tgt=Math.min(hi,Math.max(lo,L));if(tgt!==L){const adj=tgt-L;bars.forEach((b,i)=>{const f=Math.exp(adj*i/(n-1));b.o=r2(b.o*f);b.h=r2(b.h*f);b.l=r2(b.l*f);b.c=r2(b.c*f)})}}
- const QL=quarterLabels(20);const revL=sc_?Math.exp(Math.log(150)+R()*Math.log(2500/150)):us?Math.exp(Math.log(3000)+R()*Math.log(150000/3000)):Math.exp(Math.log(600)+R()*Math.log(80000/600));
+ const QL=quarterLabels(20);const tier=has(s,'5')?[3000,60000]:has(s,'N')?[1200,20000]:has(s,'M')?[400,7000]:[150,2500];const revL=us?Math.exp(Math.log(3000)+R()*Math.log(150000/3000)):Math.exp(Math.log(tier[0])+R()*Math.log(tier[1]/tier[0]));
  const ga=-0.03+R()*0.33;const em=fin?0.30+R()*0.25:0.08+R()*0.27;const nm=em*(0.42+R()*0.25);const fcfr=0.45+R()*0.65;
  const q=QL.map((L,k)=>{const yrsBack=(QL.length-1-k)/4;const seas=1+0.035*Math.sin((L.q)*1.7+R());const rev=revL/Math.pow(1+ga,yrsBack)*seas*(1+0.035*g());
   const e=Math.max(0.01,em+0.015*g());const npm=Math.max(-0.08,nm+0.012*g());const np=rev*npm;

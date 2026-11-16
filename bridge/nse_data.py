@@ -424,3 +424,36 @@ def option_history(symbol: str, days: int = 60) -> list[dict]:
             iv = (ce + pe) / u / 0.8 / (T ** 0.5)  # straddle ≈ 0.8·S·σ·√T
             out.append({"t": d.isoformat(), "u": u, "k": k, "straddle": ce + pe, "iv": iv, "exp": exp})
     return out
+
+
+# --------------------------------------------------------------------------- special situations
+SPECIAL_WORDS = ("buyback", "buy back", "open offer", "delisting", "demerger", "scheme of arrangement", "bonus", "split", "sub-division", "merger", "amalgamation", "rights issue")
+
+
+def announcements(days: int = 30) -> list[dict]:
+    to = dt.date.today()
+    frm = to - dt.timedelta(days=days)
+    data = _api(f"corporate-announcements?index=equities&from_date={frm:%d-%m-%Y}&to_date={to:%d-%m-%Y}", ttl=1800) or []
+    rows = data if isinstance(data, list) else data.get("data", [])
+    out = []
+    for r in rows:
+        txt = f"{r.get('desc', '')} {r.get('attchmntText', '')}".lower()
+        hit = next((w for w in SPECIAL_WORDS if w in txt), None)
+        if hit:
+            out.append({"sym": r.get("symbol"), "date": r.get("an_dt") or r.get("sort_date"), "type": hit, "desc": r.get("desc"),
+                        "text": (r.get("attchmntText") or "")[:400], "link": r.get("attchmntFile")})
+    return out
+
+
+def fno_ban() -> dict:
+    b = _get("https://nsearchives.nseindia.com/content/fo/fo_secban.csv")
+    if not b:
+        return {"date": None, "symbols": []}
+    lines = [l.strip() for l in b.decode("utf-8", "replace").splitlines() if l.strip()]
+    head = lines[0] if lines else ""
+    syms = []
+    for l in lines[1:]:
+        parts = [p.strip() for p in l.split(",") if p.strip()]
+        if parts:
+            syms.append(parts[-1])
+    return {"date": head, "symbols": syms}
