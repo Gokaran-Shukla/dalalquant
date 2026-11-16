@@ -780,6 +780,7 @@ DEFAULT_FEEDS = [
     ("Mint", "https://www.livemint.com/rss/markets"),
     ("CNBC", "https://www.cnbc.com/id/100003114/device/rss/rss.html"),
     ("Google News · India markets", "https://news.google.com/rss/search?q=sensex+OR+nifty+OR+RBI&hl=en-IN&gl=IN&ceid=IN:en"),
+    ("Google News · India policy", "https://news.google.com/rss/search?q=cabinet+approves+OR+government+scheme+OR+PLI+OR+budget+India+economy&hl=en-IN&gl=IN&ceid=IN:en"),
     ("Google News · Global macro", "https://news.google.com/rss/search?q=federal+reserve+OR+crude+oil+OR+tariffs+stocks&hl=en-US&gl=US&ceid=US:en"),
 ]
 _NEWS: dict[str, Any] = {"t": 0, "items": []}
