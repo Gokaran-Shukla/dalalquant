@@ -1231,6 +1231,42 @@ def ask(a: AskIn):
     return {"answer": text, "model": resp.get("model", model)}
 
 
+# ---- general AI endpoint (market brief, document Q&A) --------------------------
+AI_SYSTEMS = {
+    "brief": ("You are the chief market strategist of an Indian equity desk. Using ONLY the JSON/market context provided, write today's "
+              "pre-market brief for NSE/BSE: 1) one-paragraph market read, 2) global cues and what they mean for Indian sectors, "
+              "3) sectors to favour / avoid, 4) the opportunity list with one line each, 5) risks and events to watch, 6) a 3-bullet game plan. "
+              "Be concise, quantitative and neutral; flag if the context says the data is simulated; end with one line noting it is not investment advice."),
+    "doc": ("You are an equity research analyst reading a company document (annual report, earnings-call transcript or filing). Answer the "
+            "question using ONLY the numbered excerpts provided, quoting figures exactly and citing pages like [p. 12]. If the excerpts do "
+            "not contain the answer, say so. Structure with short headings and bullets."),
+}
+
+
+class AiIn(BaseModel):
+    task: str = "doc"
+    prompt: str
+    context: str
+
+
+@app.post("/ai", dependencies=[Depends(auth)])
+def ai(a: AiIn):
+    key = cfg("anthropic_api_key") or os.environ.get("ANTHROPIC_API_KEY")
+    if not key:
+        raise HTTPException(400, "Set anthropic_api_key in bridge/config.json (or ANTHROPIC_API_KEY) to use AI features.")
+    model = cfg("anthropic_model", "claude-sonnet-5-5")
+    body = json.dumps({"model": model, "max_tokens": 2000, "system": AI_SYSTEMS.get(a.task, AI_SYSTEMS["doc"]),
+                       "messages": [{"role": "user", "content": f"Context:\n{a.context[:120000]}\n\nTask: {a.prompt}"}]}).encode()
+    req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=body, method="POST",
+                                 headers={"x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=150) as r:
+            resp = json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        raise HTTPException(e.code, e.read().decode()[:300])
+    return {"answer": "".join(b.get("text", "") for b in resp.get("content", []) if b.get("type") == "text"), "model": resp.get("model", model)}
+
+
 # ---- daily broker logins ------------------------------------------------------
 @app.get("/login/zerodha")
 def login_zerodha():
