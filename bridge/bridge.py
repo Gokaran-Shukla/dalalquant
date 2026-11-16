@@ -702,6 +702,50 @@ def funds(p: Provider = Depends(provider)):
     return {"funds": p.funds()}
 
 
+# ---- tradebook for the P&L report --------------------------------------------
+@app.get("/tradebook", dependencies=[Depends(auth)])
+def tradebook(frm: str | None = None, to: str | None = None, request: Request = None, p: Provider = Depends(provider)):
+    """Executed trades. Most broker APIs only expose today's trades; Dhan exposes a dated history.
+    For a full year import the tradebook CSV from the broker console into the P&L tab."""
+    q = dict(request.query_params) if request else {}
+    frm = q.get("from", frm) or (dt.date.today() - dt.timedelta(days=365)).isoformat()
+    to = to or dt.date.today().isoformat()
+    out, note = [], "today's trades only (broker API limit)"
+    try:
+        if p.name == "zerodha":
+            for t in p.kite.trades():
+                out.append({"symbol": t["tradingsymbol"], "date": str(t.get("fill_timestamp") or t.get("exchange_timestamp"))[:10], "side": t["transaction_type"],
+                            "qty": t["quantity"], "price": t["average_price"], "segment": "INTRADAY" if t.get("product") == "MIS" else t.get("exchange", "EQ")})
+        elif p.name == "fyers":
+            for t in p.f.tradebook().get("tradeBook", []):
+                out.append({"symbol": t["symbol"].split(":")[-1].replace("-EQ", ""), "date": str(t.get("orderDateTime", ""))[:10], "side": "BUY" if t.get("side") == 1 else "SELL",
+                            "qty": t.get("tradedQty"), "price": t.get("tradePrice"), "segment": "INTRADAY" if t.get("productType") == "INTRADAY" else "EQ"})
+        elif p.name == "angel":
+            for t in (p.a.tradeBook().get("data") or []):
+                out.append({"symbol": t.get("tradingsymbol", "").replace("-EQ", ""), "date": dt.date.today().isoformat(), "side": t.get("transactiontype"),
+                            "qty": t.get("fillsize"), "price": t.get("fillprice"), "segment": "INTRADAY" if t.get("producttype") == "INTRADAY" else "EQ"})
+        elif p.name == "dhan":
+            note = "dated trade history"
+            page = 0
+            while page < 50:
+                r = p.d.get_trade_history(frm, to, page)
+                rows = r.get("data") or []
+                if not rows:
+                    break
+                for t in rows:
+                    out.append({"symbol": t.get("tradingSymbol") or t.get("customSymbol"), "date": str(t.get("exchangeTime") or t.get("createTime"))[:10],
+                                "side": t.get("transactionType"), "qty": t.get("tradedQuantity"), "price": t.get("tradedPrice"),
+                                "segment": "INTRADAY" if t.get("productType") == "INTRADAY" else "EQ"})
+                page += 1
+        elif p.name == "groww":
+            note = "not available through the Groww API — import the P&L/tradebook CSV from the Groww app"
+        else:
+            note = "no tradebook for this provider"
+    except Exception as e:
+        raise HTTPException(500, f"tradebook: {e}")
+    return {"trades": out, "note": note}
+
+
 # ---- fundamentals (yfinance) ------------------------------------------------
 _FCACHE: dict[str, tuple[float, dict]] = {}
 
