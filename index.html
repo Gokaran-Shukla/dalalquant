@@ -119,6 +119,7 @@ pre.code{background:#0c1218;border:1px solid var(--ln);border-radius:7px;padding
     <section class="tab" id="tab-mood"></section>
     <section class="tab" id="tab-world"></section>
     <section class="tab" id="tab-news"></section>
+    <section class="tab" id="tab-cap"></section>
     <section class="tab" id="tab-rankings"></section>
     <section class="tab" id="tab-screener"></section>
     <section class="tab" id="tab-enquiry"></section>
@@ -303,6 +304,46 @@ VOLTAS|Voltas|Consumer|M
 PAGEIND|Page Industries|Consumer|M
 ASTRAL|Astral|CapGoods|M
 CONCOR|Container Corp of India|Services|M
+KAYNES|Kaynes Technology|CapGoods|X
+AMBER|Amber Enterprises|CapGoods|X
+DATAPATTNS|Data Patterns|Defence|X
+GRSE|Garden Reach Shipbuilders|Defence|X
+BEML|BEML|Defence|X
+COCHINSHIP|Cochin Shipyard|Defence|X
+KEC|KEC International|Infra|X
+KPIL|Kalpataru Projects|Infra|X
+IRCON|IRCON International|Infra|X
+NBCC|NBCC (India)|Infra|X
+ENGINERSIN|Engineers India|Infra|X
+ELECON|Elecon Engineering|CapGoods|X
+TRITURBINE|Triveni Turbine|CapGoods|X
+CESC|CESC|Power|X
+HUDCO|HUDCO|Financials|X
+MANAPPURAM|Manappuram Finance|Financials|X
+CREDITACC|CreditAccess Grameen|Financials|X
+ANGELONE|Angel One|Financials|X
+CDSL|CDSL|Financials|X
+CAMS|Computer Age Mgmt Services|Financials|X
+PNBHOUSING|PNB Housing Finance|Financials|X
+RBLBANK|RBL Bank|Banks|X
+KARURVYSYA|Karur Vysya Bank|Banks|X
+CUB|City Union Bank|Banks|X
+CYIENT|Cyient|IT|X
+BIRLASOFT|Birlasoft|IT|X
+SONATSOFTW|Sonata Software|IT|X
+ZENSARTECH|Zensar Technologies|IT|X
+NATCOPHARM|Natco Pharma|Pharma|X
+GRANULES|Granules India|Pharma|X
+JBCHEPHARM|JB Chemicals & Pharma|Pharma|X
+NH|Narayana Hrudayalaya|Healthcare|X
+METROPOLIS|Metropolis Healthcare|Healthcare|X
+CHAMBLFERT|Chambal Fertilisers|Chemicals|X
+DEEPAKFERT|Deepak Fertilisers|Chemicals|X
+RADICO|Radico Khaitan|FMCG|X
+CROMPTON|Crompton Greaves Consumer|Consumer|X
+BLUESTARCO|Blue Star|Consumer|X
+CENTURYPLY|Century Plyboards|Consumer|X
+KPRMILL|KPR Mill|Consumer|X
 AAPL|Apple|US Tech|UQ
 MSFT|Microsoft|US Tech|UQ
 NVDA|NVIDIA|US Tech|UQ
@@ -361,6 +402,7 @@ const INDEX_DEFS=[
  {id:'NIFTY ENERGY',base:35000,f:s=>s.sector==='Energy'||s.sector==='Power'},
  {id:'NIFTY REALTY',base:900,f:s=>s.sector==='Realty'},
  {id:'NIFTY MIDCAP (select)',base:57000,f:s=>has(s,'M')},
+ {id:'NIFTY SMALLCAP (select)',base:17000,f:s=>has(s,'X')},
  {id:'S&P 500 (leaders)',base:6000,us:1,f:s=>has(s,'U')},
  {id:'NASDAQ 100 (leaders)',base:21000,us:1,f:s=>has(s,'Q')},
 ];
@@ -393,7 +435,7 @@ function quarterLabels(n){let {q,fy}=fyq(new Date());q--;if(q===0){q=4;fy--}cons
 /* ============================== Simulated demo data ============================== */
 function genSim(s){
  const R=rng(hash(s.sym)),g=()=>gauss(R),n=S.dates.length,fin=FIN.has(s.sector);
- const vol=0.17+R()*0.21;let mu=-0.03+R()*0.27;const us=s.mkt==='US';let p=us?Math.exp(Math.log(25)+R()*Math.log(900/25)):Math.exp(Math.log(90)+R()*Math.log(6000/90));
+ const sc_=has(s,'X');const vol=0.17+R()*0.21+(sc_?0.08:0);let mu=-0.03+R()*0.27;const us=s.mkt==='US';let p=us?Math.exp(Math.log(25)+R()*Math.log(900/25)):Math.exp(Math.log(90)+R()*Math.log(6000/90));
  const baseVol=Math.round(2e5+R()*8e6);const dt=1/252;const bars=[];let regime=mu;
  for(let i=0;i<n;i++){
   if(i%120===0) regime=mu+0.2*g();
@@ -405,7 +447,7 @@ function genSim(s){
   bars.push({t:S.dates[i],o:r2(o),h:r2(hi),l:r2(lo),c:r2(c),v:Math.round(baseVol*(0.6+R()*0.8)*(1+Math.abs(ret)*25))});p=c;
  }
  {const L=Math.log(bars[n-1].c/bars[0].c),lo=Math.log(0.45),hi=Math.log(3.2);const tgt=Math.min(hi,Math.max(lo,L));if(tgt!==L){const adj=tgt-L;bars.forEach((b,i)=>{const f=Math.exp(adj*i/(n-1));b.o=r2(b.o*f);b.h=r2(b.h*f);b.l=r2(b.l*f);b.c=r2(b.c*f)})}}
- const QL=quarterLabels(20);const revL=us?Math.exp(Math.log(3000)+R()*Math.log(150000/3000)):Math.exp(Math.log(600)+R()*Math.log(80000/600));
+ const QL=quarterLabels(20);const revL=sc_?Math.exp(Math.log(150)+R()*Math.log(2500/150)):us?Math.exp(Math.log(3000)+R()*Math.log(150000/3000)):Math.exp(Math.log(600)+R()*Math.log(80000/600));
  const ga=-0.03+R()*0.33;const em=fin?0.30+R()*0.25:0.08+R()*0.27;const nm=em*(0.42+R()*0.25);const fcfr=0.45+R()*0.65;
  const q=QL.map((L,k)=>{const yrsBack=(QL.length-1-k)/4;const seas=1+0.035*Math.sin((L.q)*1.7+R());const rev=revL/Math.pow(1+ga,yrsBack)*seas*(1+0.035*g());
   const e=Math.max(0.01,em+0.015*g());const npm=Math.max(-0.08,nm+0.012*g());const np=rev*npm;
@@ -604,7 +646,7 @@ function barChart(cv,labels,sets,o={}){
 }
 
 /* ============================== Shell, nav, mode ============================== */
-const TABS=[['markets','◉','India Markets'],['mood','◐','Market Mood · Sectors · Policy'],['world','🌐','World · US · Commodities'],['news','✎','News & Events'],['rankings','★','Rankings'],['screener','⌕','Screener'],['enquiry','✦','Ask · Company Enquiry'],['analyze','◈','Company'],['backtest','∿','Strategy Lab'],['options','Φ','F&O · Options'],['portfolio','▣','Portfolio'],['algo','⚡','Algo & Brokers'],['data','⚙','Data & Settings']];
+const TABS=[['markets','◉','India Markets'],['mood','◐','Market Mood · Sectors · Policy'],['world','🌐','World · US · Commodities'],['news','✎','News & Events'],['cap','◧','Large · Mid · Small cap'],['rankings','★','Rankings'],['screener','⌕','Screener'],['enquiry','✦','Ask · Company Enquiry'],['analyze','◈','Company'],['backtest','∿','Strategy Lab'],['options','Φ','F&O · Options'],['portfolio','▣','Portfolio'],['algo','⚡','Algo & Brokers'],['data','⚙','Data & Settings']];
 function buildNav(){$('#nav').innerHTML=TABS.map(([id,ic,l])=>`<button data-tab="${id}"><span class="ico">${ic}</span>${l}</button>`).join('')+`<div class="foot">Signals are rule-based calculations on the data shown — not investment advice. Markets carry risk.</div>`}
 function dataMode(){const srcs=Object.values(S.D).map(d=>d.src.px);const live=srcs.filter(x=>x==='live').length,csv=srcs.filter(x=>x==='csv').length,sim=srcs.filter(x=>x==='sim').length;return {live,csv,sim}}
 function updateMode(){const m=dataMode();let b='';if(m.live)b+=`<span class="badge b-live">LIVE ${m.live}</span> `;if(m.csv)b+=`<span class="badge b-csv">CSV ${m.csv}</span> `;if(m.sim)b+=`<span class="badge b-sim">SIM ${m.sim}</span>`;$('#modeBadge').innerHTML=b;
@@ -613,7 +655,7 @@ function srcBadge(sym){const d=S.D[sym];if(!d)return '';const p=d.src.px,f=d.src
 function clock(){const now=new Date();const ist=new Date(now.getTime()+(now.getTimezoneOffset()+330)*60000);const wd=ist.getDay(),mins=ist.getHours()*60+ist.getMinutes();let st;if(wd===0||wd===6)st='Weekend · closed';else if(mins>=540&&mins<555)st='Pre-open';else if(mins>=555&&mins<930)st='<span class="up">● Market open</span>';else st='Closed';
  $('#clock').innerHTML=`IST ${String(ist.getHours()).padStart(2,'0')}:${String(ist.getMinutes()).padStart(2,'0')} · ${st}`}
 function go(tab,push=true){if(!TABS.find(t=>t[0]===tab))tab='markets';S.tab=tab;$$('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));$$('section.tab').forEach(s=>s.classList.toggle('on',s.id==='tab-'+tab));if(push&&location.hash!=='#'+tab){try{history.replaceState(null,'','#'+tab)}catch(e){location.hash=tab}}render(tab);window.scrollTo(0,0)}
-function render(tab=S.tab){try{({markets:renderMarkets,world:renderWorld,mood:renderMood,news:renderNews,rankings:renderRankings,screener:renderScreener,analyze:renderAnalyze,enquiry:renderEnquiry,backtest:renderBacktest,options:renderOptions,portfolio:renderPortfolio,algo:renderAlgo,data:renderData})[tab]()}catch(e){console.error(e);$('#tab-'+tab).innerHTML+=`<div class="card err">Render error: ${esc(e.message)}</div>`}}
+function render(tab=S.tab){try{({markets:renderMarkets,world:renderWorld,mood:renderMood,news:renderNews,rankings:renderRankings,cap:renderCap,screener:renderScreener,analyze:renderAnalyze,enquiry:renderEnquiry,backtest:renderBacktest,options:renderOptions,portfolio:renderPortfolio,algo:renderAlgo,data:renderData})[tab]()}catch(e){console.error(e);$('#tab-'+tab).innerHTML+=`<div class="card err">Render error: ${esc(e.message)}</div>`}}
 function openSym(sym){if(!S.bySym[sym]){toast('Unknown symbol '+esc(sym));return}S.sel=sym;S._ivov=null;go('analyze')}
 function vpill(v){const c={'BUY ZONE':'v-buy','HOLD':'v-hold','WAIT':'v-wait','EXIT':'v-exit'}[v]||'v-wait';return `<span class="pill ${c}">${v||'—'}</span>`}
 function sbar(x){if(x==null)return '—';const col=x>=68?'#22c55e':x>=55?'#3b82f6':x>=42?'#f59e0b':'#ef4444';return `<span class="n">${x.toFixed(0)}</span><span class="sbar"><i style="width:${clamp(x)}%;background:${col}"></i></span>`}
@@ -651,7 +693,7 @@ function moverTable(list){return `<div class="tw"><table class="t"><thead><tr><t
 /* ============================== RANKINGS ============================== */
 const RK_COLS=[['rank','#',null],['sym','Symbol',s=>s.sym],['sector','Sector',s=>s.sector],['price','LTP',(s,m)=>m.price],['chgp','1D',(s,m)=>m.chgp],['r1m','1M',(s,m)=>m.r1m],['r1y','1Y',(s,m)=>m.r1y],['score','Score',(s,m)=>m.score],['verdict','Signal',(s,m)=>({'BUY ZONE':4,HOLD:3,WAIT:2,EXIT:1})[m.verdict]],['mcap','M.Cap',(s,m)=>m.mcap],['pe','P/E',(s,m)=>m.pe],['roe','ROE',(s,m)=>m.roe],['rev3y','Sales 3Y',(s,m)=>m.rev3y],['np3y','Profit 3Y',(s,m)=>m.np3y],['ups','Upside to IV',(s,m)=>m.ups],['offH','From 52wH',(s,m)=>m.offH],['vol','Vol',(s,m)=>m.vol],['rsi','RSI',(s,m)=>m.rsi]];
 function rankList(){const R=S.rk,f=R.f;let list=S.uni.filter(s=>S.M[s.sym]);
- if(R.mkt!=='ALL')list=list.filter(s=>s.mkt===R.mkt);if(R.index!=='ALL')list=list.filter(s=>s.idx.includes(R.index));if(R.sector!=='ALL')list=list.filter(s=>s.sector===R.sector);if(R.watch)list=list.filter(s=>S.watch.includes(s.sym));
+ if(R.mkt!=='ALL')list=list.filter(s=>s.mkt===R.mkt);if(R.cap&&R.cap!=='ALL')list=list.filter(s=>capClass(s.sym)===R.cap);if(R.index!=='ALL')list=list.filter(s=>s.idx.includes(R.index));if(R.sector!=='ALL')list=list.filter(s=>s.sector===R.sector);if(R.watch)list=list.filter(s=>S.watch.includes(s.sym));
  const num=k=>f[k]!==undefined&&f[k]!==''&&!isNaN(+f[k]);
  list=list.filter(s=>{const m=S.M[s.sym];if(num('minScore')&&!(m.score>=+f.minScore))return false;if(num('maxPE')&&!(m.pe>0&&m.pe<=+f.maxPE))return false;if(num('minROE')&&!(m.roe*100>=+f.minROE))return false;if(num('minG')&&!(m.rev3y*100>=+f.minG))return false;if(num('maxDE')&&!m.fin&&!(m.de<=+f.maxDE))return false;if(f.ab200&&!(m.sma200&&m.price>m.sma200))return false;if(f.verdict&&f.verdict!=='ALL'&&m.verdict!==f.verdict)return false;if(f.opp&&!m.opp)return false;return true});
  const col=RK_COLS.find(c=>c[0]===R.sort)||RK_COLS[7];const get=col[2]||((s,m)=>m.score);
@@ -662,6 +704,7 @@ function renderRankings(){
  el.innerHTML=`<div class="card"><h3>Rankings — best first <span class="r mu" style="text-transform:none;letter-spacing:0">${list.length} stocks · click a column to sort · click a row to open</span></h3>
  <div class="row" style="margin-bottom:8px">
   <label class="f">Market<select id="rkMkt">${[['ALL','India + US'],['IN','India (NSE/BSE)'],['US','United States']].map(([k,l])=>`<option value="${k}" ${R.mkt===k?'selected':''}>${l}</option>`).join('')}</select></label>
+  <label class="f">Cap pool<select id="rkCap">${[['ALL','All'],['Large','Large cap'],['Mid','Mid cap'],['Small','Small cap']].map(([k,l])=>`<option value="${k}" ${(R.cap||'ALL')===k?'selected':''}>${l}</option>`).join('')}</select></label>
   <label class="f">Index<select id="rkIdx"><option value="ALL">All indices (${S.uni.length})</option>${INDEX_DEFS.filter(d=>S.IDX[d.id]).map(d=>`<option ${R.index===d.id?'selected':''}>${esc(d.id)}</option>`).join('')}</select></label>
   <label class="f">Sector<select id="rkSec"><option value="ALL">All sectors</option>${secs.map(s=>`<option ${R.sector===s?'selected':''}>${esc(s)}</option>`).join('')}</select></label>
   <label class="f">Signal<select data-rkf="verdict">${['ALL','BUY ZONE','HOLD','WAIT','EXIT'].map(v=>`<option ${f.verdict===v?'selected':''}>${v}</option>`).join('')}</select></label>
@@ -1121,7 +1164,7 @@ function renderData(){
  <div class="h3" style="margin-top:12px">Import price history CSV</div><input type="file" id="fPx" accept=".csv,.txt" multiple><div class="note">Columns: <span class="mono">Date, Open, High, Low, Close, Volume</span> (+ optional <span class="mono">Symbol</span>). One file per stock named <span class="mono">INFY.csv</span> works — NSE bhavcopy/“historical data” downloads and Yahoo/yfinance exports are recognised.</div>
  <div class="h3" style="margin-top:12px">Import fundamentals CSV (quarterly)</div><input type="file" id="fFund" accept=".csv,.txt"><div class="note">Columns: <span class="mono">Symbol, Period, Revenue, EBITDA, NetProfit, FCF, EPS, Shares, Debt, Cash, Equity, Promoter, FII, DII</span>. Period like <span class="mono">Q2 FY27</span>; ₹ crore; shares in crore; latest balance-sheet values may be on any row.</div>
  <div class="row" style="margin-top:8px"><button class="btn s xs" data-act="fundTpl">Copy fundamentals template</button><button class="btn s xs" data-act="resetDemo">Reset all to demo data</button></div><div id="impMsg" class="note"></div></div>
- <div class="card"><h3>Universe — add symbols</h3><textarea id="uniAdd" rows="5" placeholder="SYMBOL|Company name|Sector|codes   e.g.  ZOMATO|Zomato|Consumer|N   (codes: 5 NIFTY50 · S SENSEX · B BANK · N NEXT50 · I IT · M MIDCAP)"></textarea><div class="row" style="margin-top:6px"><button class="btn s xs" data-act="uniAdd">Add to universe</button><button class="btn s xs" data-act="uniClear">Remove custom symbols</button></div><div class="note">Index constituent lists are as of 2026 and change at NSE/BSE semi-annual reviews — verify on niftyindices.com / bseindia.com.</div></div></div>
+ <div class="card"><h3>Universe — add symbols</h3><textarea id="uniAdd" rows="5" placeholder="SYMBOL|Company name|Sector|codes   e.g.  ZOMATO|Zomato|Consumer|N   (codes: 5 NIFTY50 · S SENSEX · B BANK · N NEXT50 · I IT · M MIDCAP · X SMALLCAP)"></textarea><div class="row" style="margin-top:6px"><button class="btn s xs" data-act="uniAdd">Add to universe</button><button class="btn s xs" data-act="uniClear">Remove custom symbols</button></div><div class="note">Index constituent lists are as of 2026 and change at NSE/BSE semi-annual reviews — verify on niftyindices.com / bseindia.com.</div></div></div>
  <div class="card"><h3>Settings</h3><div class="row">
  <label class="f">Risk-free rate %<input type="number" step="0.1" data-cfg="rf" value="${c.rf}"></label><label class="f">Discount rate (DCF) %<input type="number" step="0.5" data-cfg="disc" value="${c.disc}"></label><label class="f">Terminal growth %<input type="number" step="0.5" data-cfg="tg" value="${c.tg}"></label><label class="f">AAA bond yield (Graham) %<input type="number" step="0.1" data-cfg="aaa" value="${c.aaa}"></label>
  <label class="f">Stop = ATR ×<input type="number" step="0.5" data-cfg="atrK" value="${c.atrK}"></label><label class="f">Reward : risk<input type="number" step="0.5" data-cfg="rr" value="${c.rr}"></label><label class="f">Capital ₹<input type="number" data-cfg="capital" value="${c.capital}"></label><label class="f">Risk per trade %<input type="number" step="0.25" data-cfg="riskPct" value="${c.riskPct}"></label></div>
@@ -1303,13 +1346,13 @@ function renderEnquiry(){
 /* ============================== MARKET MOOD, SECTOR ROTATION & GOVT POLICY ============================== */
 // Policy tracker — facts from public reporting (sources listed in the tab). Edit/extend as new policy is announced.
 const POLICIES=[
- {t:'Record public capex — ₹12.2 lakh crore',d:'Union Budget 2026-27 (1 Feb 2026)',what:'Central capital expenditure raised to about ₹12.2 lakh crore for FY27, plus an Infrastructure Risk Guarantee Fund and dedicated freight corridors. Fiscal deficit target 4.3% of GDP.',sec:['Infra','CapGoods','Cement','Metals'],syms:['LT','ADANIPORTS','ABB','SIEMENS','CGPOWER','CUMMINSIND','BHEL','POLYCAB','ULTRACEMCO','AMBUJACEM','JSWSTEEL','TATASTEEL'],src:0},
- {t:'Railways & high-speed rail corridors',d:'Union Budget 2026-27',what:'Seven new high-speed rail corridors announced; railway capex reported at about ₹2.9 lakh crore for FY27.',sec:['Infra','Services','Financials'],syms:['LT','CONCOR','IRFC','BEL','SIEMENS','ABB'],src:1},
- {t:'Defence spending up sharply',d:'Union Budget 2026-27',what:'Defence allocation rose about 21% year on year (BE), continuing the indigenisation push.',sec:['Defence'],syms:['HAL','BEL','SOLARINDS','BHARATFORG','BHEL'],src:2},
- {t:'India Semiconductor Mission 2.0',d:'Announced in Budget 2026-27',what:'ISM 2.0 shifts to ecosystem depth — equipment, materials, design, research and training — with ₹1,000 crore allocated for FY27; 10 ISM projects worth ₹1.6 lakh crore were approved under ISM 1.0 by Dec 2025.',sec:['CapGoods','IT'],syms:['DIXON','CGPOWER','TATAELXSI','KPITTECH','HCLTECH','POLYCAB'],src:3},
- {t:'Manufacturing push in 7 strategic sectors',d:'Union Budget 2026-27',what:'Scaling up semiconductors, electronics, chemicals, biopharma, textiles, capital goods and critical minerals to reduce import dependence.',sec:['Chemicals','Pharma','CapGoods','Metals'],syms:['SRF','PIIND','PIDILITIND','SUNPHARMA','DIVISLAB','DRREDDY','LUPIN','DIXON','HINDZINC','VEDL','NMDC'],src:4},
- {t:'PLI schemes (14 sectors)',d:'Running since 2020–21; data to Dec 2025',what:'Outlay of about ₹1.97 lakh crore across 14 sectors; ₹28,748 crore disbursed and 836 applications approved by 31 Dec 2025. Reports say the government will not extend PLI beyond the 14 sectors; the food-processing PLI ends in FY27 and a fresh mobile-manufacturing scheme is under consideration.',sec:['Auto','Pharma','CapGoods','Telecom','FMCG'],syms:['DIXON','M&M','TMPV','MARUTI','BAJAJ-AUTO','TVSMOTOR','SUNPHARMA','CIPLA','BHARTIARTL','INDUSTOWER','VOLTAS','HAVELLS'],src:5},
- {t:'Energy storage & renewables manufacturing',d:'Union Budget 2026-27',what:'Customs-duty relief on capital goods for battery-energy-storage and inputs for renewable manufacturing (e.g. solar glass), supporting grid-scale storage.',sec:['Power','Energy'],syms:['TATAPOWER','ADANIGREEN','NTPC','JSWENERGY','NHPC','ADANIENSOL','POWERGRID'],src:6},
+ {t:'Record public capex — ₹12.2 lakh crore',d:'Union Budget 2026-27 (1 Feb 2026)',what:'Central capital expenditure raised to about ₹12.2 lakh crore for FY27, plus an Infrastructure Risk Guarantee Fund and dedicated freight corridors. Fiscal deficit target 4.3% of GDP.',sec:['Infra','CapGoods','Cement','Metals'],syms:['LT','ADANIPORTS','ABB','SIEMENS','CGPOWER','CUMMINSIND','BHEL','POLYCAB','ULTRACEMCO','AMBUJACEM','JSWSTEEL','TATASTEEL','KEC','KPIL','NBCC','ENGINERSIN','ELECON','TRITURBINE','HUDCO'],src:0},
+ {t:'Railways & high-speed rail corridors',d:'Union Budget 2026-27',what:'Seven new high-speed rail corridors announced; railway capex reported at about ₹2.9 lakh crore for FY27.',sec:['Infra','Services','Financials'],syms:['LT','CONCOR','IRFC','BEL','SIEMENS','ABB','IRCON','KEC','BEML'],src:1},
+ {t:'Defence spending up sharply',d:'Union Budget 2026-27',what:'Defence allocation rose about 21% year on year (BE), continuing the indigenisation push.',sec:['Defence'],syms:['HAL','BEL','SOLARINDS','BHARATFORG','BHEL','DATAPATTNS','GRSE','COCHINSHIP','BEML'],src:2},
+ {t:'India Semiconductor Mission 2.0',d:'Announced in Budget 2026-27',what:'ISM 2.0 shifts to ecosystem depth — equipment, materials, design, research and training — with ₹1,000 crore allocated for FY27; 10 ISM projects worth ₹1.6 lakh crore were approved under ISM 1.0 by Dec 2025.',sec:['CapGoods','IT'],syms:['DIXON','CGPOWER','TATAELXSI','KPITTECH','HCLTECH','POLYCAB','KAYNES','AMBER','CYIENT'],src:3},
+ {t:'Manufacturing push in 7 strategic sectors',d:'Union Budget 2026-27',what:'Scaling up semiconductors, electronics, chemicals, biopharma, textiles, capital goods and critical minerals to reduce import dependence.',sec:['Chemicals','Pharma','CapGoods','Metals'],syms:['SRF','PIIND','PIDILITIND','SUNPHARMA','DIVISLAB','DRREDDY','LUPIN','DIXON','HINDZINC','VEDL','NMDC','NATCOPHARM','GRANULES','JBCHEPHARM','KAYNES','KPRMILL'],src:4},
+ {t:'PLI schemes (14 sectors)',d:'Running since 2020–21; data to Dec 2025',what:'Outlay of about ₹1.97 lakh crore across 14 sectors; ₹28,748 crore disbursed and 836 applications approved by 31 Dec 2025. Reports say the government will not extend PLI beyond the 14 sectors; the food-processing PLI ends in FY27 and a fresh mobile-manufacturing scheme is under consideration.',sec:['Auto','Pharma','CapGoods','Telecom','FMCG'],syms:['DIXON','M&M','TMPV','MARUTI','BAJAJ-AUTO','TVSMOTOR','SUNPHARMA','CIPLA','BHARTIARTL','INDUSTOWER','VOLTAS','HAVELLS','AMBER','BLUESTARCO','CROMPTON','KAYNES'],src:5},
+ {t:'Energy storage & renewables manufacturing',d:'Union Budget 2026-27',what:'Customs-duty relief on capital goods for battery-energy-storage and inputs for renewable manufacturing (e.g. solar glass), supporting grid-scale storage.',sec:['Power','Energy'],syms:['TATAPOWER','ADANIGREEN','NTPC','JSWENERGY','NHPC','ADANIENSOL','POWERGRID','CESC','TRITURBINE'],src:6},
  {t:'AI data centres — tax holiday',d:'Union Budget 2026-27',what:'Tax incentives for AI data-centre investment, alongside continued support for the IndiaAI and National Quantum missions.',sec:['Telecom','IT','Power'],syms:['BHARTIARTL','RELIANCE','ADANIENT','TCS','INFY','TATAPOWER'],src:7},
 ];
 const POLICY_SRC=[['Union Budget 2026-27 highlights (ICICI Direct)','https://icicidirect.com/research/equity/finace/union-budget-2026-27-what-was-announced-and-what-changed'],['Budget 2026 key highlights (Oliveboard)','https://www.oliveboard.in/blog/union-budget-key-highlights/'],['Capex & defence allocation (Outlook Business)','https://www.outlookbusiness.com/budget/budget-2026-fm-sitharaman-raises-capex-for-fy27-to-122-lakh-crore'],['ISM 2.0 (PIB)','https://static.pib.gov.in/WriteReadData/specificdocs/documents/2026/feb/doc202627782201.pdf'],['Seven strategic sectors (The Week)','https://www.theweek.in/news/biz-tech/2026/02/01/full-analysis-how-budget-2026-27-paves-the-way-for-a-developed-india.html'],['PLI progress (Outlook Business)','https://www.outlookbusiness.com/economy-and-policy/govt-disburses-28748-cr-under-pli-scheme-till-december-drives-over-8-lakh-cr-exports'],['Energy storage measures (Moneylife)','https://www.moneylife.in/article/union-budget-202627-outlines-industrial-policy-anchored-in-manufacturing-and-technology/79535.html'],['AI data-centre tax holiday (PIO TV)','https://piotv.com/news/indian-budget-2026-big-infra-tax-holiday-for-ai-data-centres-cheaper-cancer-drugs']];
@@ -1363,6 +1406,49 @@ function renderMood(){
  gauge($('#moodG'),M.score);rrg($('#rrg'),R);
 }
 
+/* ============================== LARGE · MID · SMALL CAP POOLS ============================== */
+S.cap={pool:'Large'};
+const POOLS=['Large','Mid','Small'];
+function capClass(sym){const s=S.bySym[sym];if(!s||s.mkt!=='IN')return null;
+ // With real fundamentals for most stocks, rank by market cap (SEBI/AMFI: 1-100 large, 101-250 mid, 251+ small).
+ const ind=S.uni.filter(x=>x.mkt==='IN'&&S.M[x.sym]&&S.M[x.sym].mcap);const real=ind.filter(x=>S.D[x.sym].src.f!=='sim').length;
+ if(real>ind.length*0.8){if(!S._capRank||S._capRankV!==S.M){S._capRank=new Map([...ind].sort((a,b)=>S.M[b.sym].mcap-S.M[a.sym].mcap).map((x,i)=>[x.sym,i+1]));S._capRankV=S.M}const r=S._capRank.get(sym);return r==null?null:r<=100?'Large':r<=250?'Mid':'Small'}
+ if(has(s,'5')||has(s,'N'))return 'Large';if(has(s,'M'))return 'Mid';if(has(s,'X'))return 'Small';return 'Small'}
+function poolStats(pool){const ms=S.uni.filter(s=>capClass(s.sym)===pool).map(s=>S.M[s.sym]).filter(Boolean);if(!ms.length)return null;const md=k=>median(ms.map(m=>m[k]));const av=k=>mean(ms.map(m=>m[k]).filter(v=>v!=null&&isFinite(v)));
+ const proj=ms.map(m=>projections(m)).filter(Boolean).map(p=>p.sc[1].cagr);
+ // equal-weight pool index over common dates
+ const L=Math.min(...ms.map(m=>S.D[m.sym].bars.length),756);const idx=[];for(let i=0;i<L;i++){idx.push(mean(ms.map(m=>{const b=S.D[m.sym].bars;return b[b.length-L+i].c/b[b.length-L].c})))}
+ return {ms,n:ms.length,r1d:av('chgp'),r1w:av('r1w'),r1m:av('r1m'),r3m:av('r3m'),r1y:av('r1y'),r3y:av('r3y'),pe:md('pe'),roe:md('roe'),g3:md('rev3y'),p3:md('np3y'),ups:md('ups'),vol:md('vol'),mdd:md('mdd'),score:av('score'),
+  a200:ms.filter(m=>m.sma200&&m.price>m.sma200).length/ms.length,adv:ms.filter(m=>m.chgp>0).length,dec:ms.filter(m=>m.chgp<0).length,buy:ms.filter(m=>m.verdict==='BUY ZONE').length,exit:ms.filter(m=>m.verdict==='EXIT').length,opp:ms.filter(m=>m.opp).length,base3:median(proj),idx,mcap:ms.reduce((a,m)=>a+(m.mcap||0),0)}}
+function enterList(ms,k=6){return ms.filter(m=>!m.hardExit&&(m.verdict==='BUY ZONE'||m.opp)).sort((a,b)=>((b.opp?15:0)+b.score)-((a.opp?15:0)+a.score)).slice(0,k)}
+function exitList(ms,k=6){return ms.filter(m=>m.verdict==='EXIT').sort((a,b)=>((b.hardExit?20:0)-b.score)-((a.hardExit?20:0)-a.score)).slice(0,k)}
+function renderCap(){
+ const el=$('#tab-cap');const P=S.cap.pool;const st={};POOLS.forEach(p=>st[p]=poolStats(p));const T=st[P];
+ const rankMode=S.uni.filter(x=>x.mkt==='IN'&&S.D[x.sym].src.f!=='sim').length>S.uni.filter(x=>x.mkt==='IN').length*0.8;
+ if(!T){el.innerHTML='<div class="card">No stocks in this pool.</div>';return}
+ const best=POOLS.filter(p=>st[p]).sort((a,b)=>((st[b].score||0)+(st[b].ups||0)*40)-((st[a].score||0)+(st[a].ups||0)*40))[0];
+ const pol=POLICIES.map(p=>({p,hits:p.syms.filter(x=>capClass(x)===P).map(x=>S.M[x]).filter(Boolean)})).filter(x=>x.hits.length);
+ const polNews=S.news.filter(n=>n.syms.some(x=>capClass(x)===P)&&(n.tags.includes('Budget & policy')||/\b(cabinet|scheme|government|govt|ministry|order|contract)\b/i.test(n.title))).slice(0,8);
+ const E=enterList(T.ms),X=exitList(T.ms);const top=[...T.ms].sort((a,b)=>(b.score||0)-(a.score||0)).slice(0,25);
+ const desc={Large:'Top 100 companies by market value — index heavyweights, lower volatility, deepest liquidity.',Mid:'Companies ranked 101–250 — the growth engine of the market, more volatile than large caps.',Small:'Companies ranked 251 and beyond — highest growth potential and highest risk; liquidity and governance need extra care.'}[P];
+ const tone=T.score>=58&&T.a200>0.55?'healthy':T.score<45||T.a200<0.4?'stressed':'mixed';
+ el.innerHTML=`<div class="card"><div class="row"><div class="tabs2" style="border:0;margin:0;padding:0">${POOLS.map(p=>`<button data-pool="${p}" class="${P===p?'on':''}" style="font-size:14px;padding:7px 16px">${p} cap <span class="mu">(${st[p]?st[p].n:0})</span></button>`).join('')}</div><span class="spacer"></span><span class="sub">${rankMode?'Classified by live market-cap rank (SEBI/AMFI rule)':'Classified by index membership: NIFTY 100 → large, NIFTY Midcap → mid, NIFTY Smallcap (select) → small'} ${dataMode().sim?'<span class="badge b-sim">SIM DATA</span>':''}</span></div></div>
+ <div class="card" style="border-color:#23406e;background:linear-gradient(180deg,#0f1b2d,#10161e)"><h3>${P}-cap pool — summary</h3><div class="pulse">${desc} The ${P.toLowerCase()}-cap pool looks <b>${tone}</b>: <b>${T.adv}</b> of ${T.n} stocks are up today and <b>${fPp(T.a200,0)}</b> trade above their 200-day average. Over the past year the pool returned <b class="${T.r1y>=0?'up':'dn'}">${fPt(T.r1y)}</b> (equal-weighted). At a median P/E of <b>${fN(T.pe,1)}</b> and median ROE of <b>${fPp(T.roe)}</b>, the median stock sits <b class="${T.ups>=0?'up':'dn'}">${fPt(T.ups)}</b> from its intrinsic value, and the base-case 3-year scenario implies a median <b>${fPt(T.base3)}</b> a year. The engine has <b class="up">${T.buy} in BUY ZONE</b>, <b class="dn">${T.exit} on EXIT</b> and <b style="color:#4ade80">${T.opp} opportunit${T.opp===1?'y':'ies'}</b>. Across the three pools, <b>${best}</b> caps currently screen best on score plus valuation.</div></div>
+ <div class="g2e"><div class="card"><h3 class="up" style="color:#4ade80">▲ Best opportunities to ENTER</h3>${E.length?E.map(m=>{const c=callFor(m),s=S.bySym[m.sym];return `<div class="oc" data-open="${esc(m.sym)}" style="margin-bottom:6px"><div class="row"><span class="s">${esc(m.sym)}</span>${srcBadge(m.sym)}${m.opp?'<span class="badge b-live">OPP</span>':''}${vpill(m.verdict)}<span style="margin-left:auto" class="n">₹${fN(m.price)} ${fP(m.chgp)}</span></div><div class="sub">${esc(s.name)} · ${esc(s.sector)} · score ${fN(m.score,0)}</div>
+  <div class="why">Entry ${fN(c.ezLo)}–${fN(c.ezHi)} · stop <b class="dn">${fN(c.stop)}</b> · T1 <b class="up">${fN(c.t1)}</b> · T2 ${fN(c.t2)}${c.t3?' · fair value '+fN(c.t3,0):''}</div><div class="why">${esc(m.reasons.filter(r=>r.ok).slice(0,3).map(r=>r.t).join(' · '))}</div></div>`}).join(''):'<div class="mu">No stock in this pool passes the entry rules right now.</div>'}</div>
+ <div class="card"><h3 style="color:#f87171">▼ Stocks to EXIT / avoid</h3>${X.length?X.map(m=>{const s=S.bySym[m.sym];return `<div class="oc" data-open="${esc(m.sym)}" style="margin-bottom:6px;background:linear-gradient(180deg,#2a1010,#1a1212);border-color:#7f1d1d"><div class="row"><span class="s">${esc(m.sym)}</span>${srcBadge(m.sym)}${m.hardExit?'<span class="pill v-exit">HARD EXIT</span>':vpill(m.verdict)}<span style="margin-left:auto" class="n">₹${fN(m.price)} ${fP(m.chgp)}</span></div><div class="sub">${esc(s.name)} · ${esc(s.sector)} · score ${fN(m.score,0)}</div>
+  <div class="why" style="color:#e7b4b4">${esc(m.reasons.filter(r=>!r.ok).slice(0,3).map(r=>r.t).join(' · '))}</div></div>`}).join(''):'<div class="mu">No exit signals in this pool.</div>'}</div></div>
+ <div class="g3"><div class="card"><h3>Past</h3><div class="kv">${kv('1W',fPt(T.r1w),T.r1w)}${kv('1M',fPt(T.r1m),T.r1m)}${kv('3M',fPt(T.r3m),T.r3m)}${kv('1Y',fPt(T.r1y),T.r1y)}${kv('3Y',fPt(T.r3y),T.r3y)}${kv('Median max DD',fPt(T.mdd),T.mdd)}</div><canvas class="chart2" id="poolChart" style="margin-top:8px;height:170px"></canvas></div>
+ <div class="card"><h3>Present</h3><div class="kv">${kv('Stocks',T.n)}${kv('Advancing',T.adv+' / '+T.n)}${kv('Above 200-DMA',fPp(T.a200,0))}${kv('Median P/E',fN(T.pe,1))}${kv('Median ROE',fPp(T.roe))}${kv('Median volatility',fPp(T.vol,0))}${kv('Avg DQ score',fN(T.score,0))}${kv('Total m.cap',fCr(T.mcap))}</div></div>
+ <div class="card"><h3>Future prospects</h3><div class="kv">${kv('Median sales 3Y CAGR',fPt(T.g3),T.g3)}${kv('Median profit 3Y CAGR',fPt(T.p3),T.p3)}${kv('Median upside to IV',fPt(T.ups),T.ups)}${kv('Base-case 3Y CAGR',fPt(T.base3),T.base3)}${kv('BUY ZONE',T.buy)}${kv('Opportunities',T.opp)}</div><div class="note">Base case = median of each stock's 3-year EPS scenario at sector-median P/E (see Ask · Company Enquiry).</div></div></div>
+ <div class="card"><h3>Large vs mid vs small — side by side</h3><div class="tw"><table class="t"><thead><tr><th>Pool</th><th class="n">Stocks</th><th class="n">1M</th><th class="n">1Y</th><th class="n">3Y</th><th class="n">Median P/E</th><th class="n">Median ROE</th><th class="n">Sales 3Y</th><th class="n">Upside to IV</th><th class="n">Base 3Y CAGR</th><th class="n">Volatility</th><th class="n">>200DMA</th><th class="n">Score</th><th class="n">Buy / Exit</th></tr></thead><tbody>${POOLS.filter(p=>st[p]).map(p=>{const x=st[p];return `<tr class="cl" data-pool="${p}" ${p===P?'style="background:#13243d"':''}><td><b>${p} cap</b> ${p===best?'<span class="badge b-live">BEST NOW</span>':''}</td><td class="n">${x.n}</td><td class="n">${fP(x.r1m)}</td><td class="n">${fP(x.r1y)}</td><td class="n">${fP(x.r3y)}</td><td class="n">${fN(x.pe,1)}</td><td class="n">${fPp(x.roe)}</td><td class="n">${fP(x.g3)}</td><td class="n">${fP(x.ups)}</td><td class="n">${fP(x.base3)}</td><td class="n">${fPp(x.vol,0)}</td><td class="n">${fPp(x.a200,0)}</td><td class="n">${fN(x.score,0)}</td><td class="n"><span class="up">${x.buy}</span> / <span class="dn">${x.exit}</span></td></tr>`}).join('')}</tbody></table></div></div>
+ <div class="card"><h3>Government decisions affecting ${P.toLowerCase()}-cap stocks</h3>${pol.length?`<div class="opp" style="grid-template-columns:repeat(auto-fill,minmax(330px,1fr))">${pol.map(({p,hits})=>`<div class="ic" style="cursor:default"><b>${esc(p.t)}</b><div class="sub">${esc(p.d)} · <a href="${POLICY_SRC[p.src][1]}" target="_blank" rel="noopener">source ↗</a></div><div style="font-size:12px;color:#cbd5e1;margin:5px 0">${esc(p.what)}</div><div class="row" style="gap:4px">${hits.map(m=>`<span class="tag" data-open="${esc(m.sym)}" style="cursor:pointer;color:${m.verdict==='BUY ZONE'?'#4ade80':m.verdict==='EXIT'?'#f87171':'#cbd5e1'}">${esc(m.sym)} · ${m.verdict} · 1M ${fPt(m.r1m,0)}</span>`).join('')}</div></div>`).join('')}</div>`:'<div class="mu">No tracked policy names stocks in this pool.</div>'}
+  ${polNews.length?`<div class="h3" style="margin-top:10px">Recent government / order news on ${P.toLowerCase()} caps</div><div class="news">${polNews.map(n=>`<div class="ni ${n.imp}"><a href="${esc(n.link)}" target="_blank" rel="noopener">${esc(n.title)}</a><div class="meta">${esc(n.source||'')} · ${n.syms.filter(x=>capClass(x)===P).map(t=>`<span class="tag" data-open="${esc(t)}" style="cursor:pointer;color:#93c5fd">${esc(t)}</span>`).join('')}</div></div>`).join('')}</div>`:`<div class="note">${S.bridge.ok?'No recent government headlines mention stocks in this pool.':'Live government-decision headlines for these stocks appear once bridge.py is connected.'}</div>`}</div>
+ <div class="card"><h3>${P}-cap leaderboard (top 25 by DQ score) <span class="r"><button class="btn xs s" data-act="capRank">Full ranking →</button></span></h3><div class="tw"><table class="t"><thead><tr><th>#</th><th>Symbol</th><th>Sector</th><th class="n">LTP</th><th class="n">1D</th><th class="n">1Y</th><th class="n">M.Cap</th><th class="n">P/E</th><th class="n">ROE</th><th class="n">Upside</th><th>Score</th><th>Signal</th></tr></thead><tbody>${top.map((m,i)=>`<tr class="cl" data-open="${esc(m.sym)}"><td class="mu">${i+1}</td><td><b>${esc(m.sym)}</b> ${m.opp?'<span class="badge b-live">OPP</span>':''}</td><td class="mu">${esc(S.bySym[m.sym].sector)}</td><td class="n">${fN(m.price)}</td><td class="n">${fP(m.chgp)}</td><td class="n">${fP(m.r1y)}</td><td class="n">${fCr(m.mcap)}</td><td class="n">${fN(m.pe,1)}</td><td class="n">${fPp(m.roe)}</td><td class="n">${fP(m.ups)}</td><td>${sbar(m.score)}</td><td>${vpill(m.verdict)}</td></tr>`).join('')}</tbody></table></div></div>`;
+ const nb=S.IDX['NIFTY 50'].bars;const L=T.idx.length;const n0=nb[nb.length-L].c;const lines=POOLS.filter(p=>st[p]).map(p=>({data:st[p].idx.slice(-L).map(v=>v*100),color:{Large:'#3b82f6',Mid:'#f59e0b',Small:'#a78bfa'}[p],label:p,w:p===P?2.4:1.2}));lines.push({data:nb.slice(-L).map(b=>b.c/n0*100),color:'#64748b',dash:[4,3],label:'NIFTY 50'});
+ lineChart($('#poolChart'),lines,{labels:nb.slice(-L).map(b=>b.t.slice(2,7))});
+}
+
 /* ============================== Events ============================== */
 function fillDatalist(){$('#symlist').innerHTML=S.uni.map(s=>`<option value="${esc(s.sym)}">${esc(s.name)}</option>`).join('')}
 function recompute(){computeAll();updateMode();render()}
@@ -1386,13 +1472,14 @@ document.addEventListener('click',e=>{const t=e.target;const tab=t.closest('[dat
  const dc=t.closest('[data-delcond]');if(dc){S.algo.conds.splice(+dc.dataset.delcond,1);saveAlgo();renderAlgo();return}
  const so2=t.closest('[data-sigorder]');if(so2){const sym=so2.dataset.sigorder,A=S.algo;const qty=A.sizing==='amt'?Math.floor(A.amt/S.M[sym].price):A.qty;placeOrder({sym,side:A.side,qty,type:'MARKET',product:A.product,sl:A.sl,tp:A.tp,strategy:A.name}).then(()=>renderAlgo());return}
  const cp=t.closest('[data-closepos]');if(cp){const k=cp.dataset.closepos,p=S.paper.pos[k];placeOrder({sym:k,side:p.qty>0?'SELL':'BUY',qty:Math.abs(p.qty),type:'MARKET',product:'MIS',strategy:'manual exit'}).then(()=>renderAlgo());return}
+ const pl=t.closest('[data-pool]');if(pl){S.cap.pool=pl.dataset.pool;renderCap();return}
  const eq=t.closest('[data-enq]');if(eq){S.enq.sym=eq.dataset.enq;S.enq.ans=null;S.enq.q='';renderEnquiry();return}
  const ep=t.closest('[data-enqprompt]');if(ep){S.enq.q=ep.dataset.enqprompt;const ta=$('#enqQ');if(ta)ta.value=S.enq.q;askAI();return}
  const bts=t.closest('[data-btsym]');if(bts){S.bt.sym=bts.dataset.btsym;runBT();renderBacktest();return}
  const a=t.closest('[data-act]');if(!a)return;const act=a.dataset.act;
  const acts={
   closeModal,
-  rkReset(){S.rk.f={};S.rk.index='ALL';S.rk.sector='ALL';S.rk.watch=false;renderRankings()},
+  rkReset(){S.rk.f={};S.rk.cap='ALL';S.rk.index='ALL';S.rk.sector='ALL';S.rk.watch=false;renderRankings()},
   rkCsv(){download('dalalquant_rankings.csv',rankCsv())},rkCopy(){copyText(rankCsv())},
   wReset(){S.cfg.w=Object.assign({},DEF_CFG.w);saveCfg();reScore();renderRankings()},
   scrRun(){S.scr.q=$('#scrQ').value;runScreen();renderScreener()},
@@ -1422,6 +1509,7 @@ document.addEventListener('click',e=>{const t=e.target;const tab=t.closest('[dat
   newsRefresh(){loadNews()},
   enqGo(){const v=$('#enqSym').value.trim();const u=v.toUpperCase();const x=S.bySym[u]||S.uni.find(z=>z.name.toUpperCase().includes(u));if(!x){toast('Not in the universe — add it in Data & Settings');return}S.enq.sym=x.sym;S.enq.ans=null;S.enq.q='';renderEnquiry()},
   enqAsk(){askAI()},
+  capRank(){S.rk.mkt='IN';S.rk.index='ALL';S.rk.sector='ALL';S.rk.f={};S.rk.cap=S.cap.pool;go('rankings')},
   enqCopy(){copyText(dossierText(S.enq.sym))},
   usRank(){S.rk.mkt='US';S.rk.index='ALL';go('rankings')},
   tkPlace(){const sym=$('#tkSym').value.trim().toUpperCase();if(!S.bySym[sym]){toast('Unknown symbol');return}const o={sym,side:$('#tkSide').value,qty:+$('#tkQty').value,type:$('#tkType').value,price:$('#tkPx').value,product:$('#tkProd').value,sl:+$('#tkSl').value,tp:+$('#tkTp').value,strategy:'manual'};S._tkSym=sym;
@@ -1437,7 +1525,7 @@ document.addEventListener('click',e=>{const t=e.target;const tab=t.closest('[dat
  if(acts[act])acts[act]();
 });
 document.addEventListener('change',e=>{const t=e.target;
- if(t.id==='rkMkt'){S.rk.mkt=t.value;renderRankings()}else if(t.id==='rkIdx'){S.rk.index=t.value;renderRankings()}else if(t.id==='rkSec'){S.rk.sector=t.value;renderRankings()}else if(t.id==='rkWatch'){S.rk.watch=t.checked;renderRankings()}
+ if(t.id==='rkMkt'){S.rk.mkt=t.value;renderRankings()}else if(t.id==='rkCap'){S.rk.cap=t.value;renderRankings()}else if(t.id==='rkIdx'){S.rk.index=t.value;renderRankings()}else if(t.id==='rkSec'){S.rk.sector=t.value;renderRankings()}else if(t.id==='rkWatch'){S.rk.watch=t.checked;renderRankings()}
  else if(t.dataset.rkf){S.rk.f[t.dataset.rkf]=t.type==='checkbox'?t.checked:t.value;renderRankings()}
  else if(t.dataset.w){S.cfg.w[t.dataset.w]=+t.value;saveCfg();reScore();renderRankings()}
  else if(t.dataset.col){const n=t.dataset.col;S.scr.cols=t.checked?[...S.scr.cols,n]:S.scr.cols.filter(x=>x!==n);renderScreener()}
