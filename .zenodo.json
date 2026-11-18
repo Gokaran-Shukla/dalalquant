@@ -1,0 +1,28 @@
+{
+  "title": "DalalQuant: a browser-based terminal for Indian markets",
+  "upload_type": "software",
+  "description": "DalalQuant is a single-page terminal for investing, trading and algorithmic trading on NSE/BSE, with US stocks, world indices, commodities, FX, bonds and crypto. It runs entirely in the browser and provides market briefings, breadth and sentiment indicators, sector rotation, a government policy tracker, screeners, backtesting and strategy tools; an optional bridge adds real-time data, news and order routing through the user's own broker account.",
+  "creators": [
+    {
+      "name": "Shukla, Gokaran",
+      "orcid": "0000-0001-9332-3332",
+      "affiliation": "King Abdullah University of Science and Technology (KAUST)"
+    }
+  ],
+  "keywords": [
+    "algorithmic trading",
+    "quantitative finance",
+    "NSE",
+    "BSE",
+    "Indian stock market",
+    "backtesting",
+    "web application"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/Gokaran-Shukla/dalalquant",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    }
+  ]
+}
