@@ -1,5 +1,7 @@
 # DalalQuant — Indian markets terminal
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24334668.svg)](https://doi.org/10.5281/zenodo.24334668)
+
 **Live site:** https://gokaran-shukla.github.io/dalalquant
 
 DalalQuant is a single-page terminal covering investing, trading and algo trading on NSE/BSE. It also includes US stocks, world indices, commodities, FX, bonds and crypto. Everything runs in your browser. The small optional **bridge** (`bridge/bridge.py`) adds real-time data, news and order routing through your own broker account.
@@ -124,3 +126,23 @@ When you add a new `js/NN-*.js` file, add its `<script>` tag before `js/99-boot.
 - `tests/`: JS (jsdom) and Python unit tests · `deploy/`: Docker + Caddy cloud bridge · `.github/workflows/ci.yml`: CI
 - `bridge/bridge.py`: FastAPI bridge (REST contract documented in the Algo tab)
 - `bridge/config.example.json`, `bridge/requirements.txt`
+
+## Citing DalalQuant
+
+If DalalQuant helps your work, please cite the software:
+
+> G. Shukla, *DalalQuant: a browser-based terminal for Indian markets*, version 1.0.0 (2026). Zenodo. https://doi.org/10.5281/zenodo.24334668
+
+```bibtex
+@software{shukla_dalalquant_2026,
+  author    = {Shukla, Gokaran},
+  title     = {DalalQuant: a browser-based terminal for Indian markets},
+  version   = {1.0.0},
+  year      = {2026},
+  publisher = {Zenodo},
+  doi       = {10.5281/zenodo.24334668},
+  url       = {https://github.com/Gokaran-Shukla/dalalquant}
+}
+```
+
+GitHub's **"Cite this repository"** button (from `CITATION.cff`) gives the same reference in APA and BibTeX.
