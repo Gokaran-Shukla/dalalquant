@@ -402,7 +402,10 @@ class FyersProvider(Provider):
             nxt = min(cur + dt.timedelta(days=360), end)
             r = self.f.history(data={"symbol": self._sym(symbol), "resolution": "D", "date_format": "1",
                                      "range_from": cur.isoformat(), "range_to": nxt.isoformat(), "cont_flag": "1"})
-            for c in r.get("candles", []):
+            if not isinstance(r, dict) or r.get("s") not in ("ok", "no_data"):
+                msg = r.get("message") if isinstance(r, dict) else str(r)
+                raise HTTPException(502, f"Fyers history {self._sym(symbol)}: {msg} (code {r.get('code') if isinstance(r, dict) else '?'})")
+            for c in r.get("candles", []) or []:
                 bars.append({"t": dt.datetime.fromtimestamp(c[0]).strftime("%Y-%m-%d"), "o": c[1], "h": c[2], "l": c[3], "c": c[4], "v": c[5]})
             cur = nxt + dt.timedelta(days=1)
         seen, out = set(), []
@@ -775,7 +778,19 @@ def quote(symbols: str, kind: str = "equity", p: Provider = Depends(provider)):
 
 @app.get("/history", dependencies=[Depends(auth)])
 def history(symbol: str, interval: str = "day", days: int = 1100, p: Provider = Depends(provider)):
-    return {"bars": p.history(symbol, min(days, 2000))}
+    try:
+        bars = p.history(symbol, min(days, 2000))
+        if len(bars) > 30 or p.name == "yahoo":
+            return {"bars": bars, "src": p.name}
+        err = f"{p.name}: only {len(bars)} bars"
+    except Exception as e:  # noqa: BLE001
+        err = getattr(e, "detail", None) or str(e)
+    log.warning("history %s failed on %s: %s", symbol, p.name, err)
+    if cfg("yahoo_fallback", True) and p.name != "yahoo":
+        bars = YahooProvider().history(symbol, min(days, 2000))
+        if bars:
+            return {"bars": bars, "src": "yahoo-fallback", "warning": err}
+    raise HTTPException(502, err)
 
 
 @app.get("/optionchain", dependencies=[Depends(auth)])
