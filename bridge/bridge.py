@@ -359,6 +359,30 @@ class ZerodhaProvider(Provider):
         return self.kite.margins()
 
 
+class _RateLimit:
+    """Thread-safe sliding-window limiter (Fyers: 10 req/s, 200 req/min)."""
+
+    def __init__(self, per_sec: int, per_min: int):
+        from collections import deque
+        self.ps, self.pm, self.q, self.lock = per_sec, per_min, deque(), threading.Lock()
+
+    def wait(self):
+        while True:
+            with self.lock:
+                now = time.time()
+                while self.q and now - self.q[0] > 60:
+                    self.q.popleft()
+                last_sec = sum(1 for t in self.q if now - t < 1)
+                if len(self.q) < self.pm and last_sec < self.ps:
+                    self.q.append(now)
+                    return
+                pause = 0.15 if len(self.q) < self.pm else 60 - (now - self.q[0]) + 0.05
+            time.sleep(max(pause, 0.05))
+
+
+_FYERS_RL = _RateLimit(per_sec=8, per_min=170)
+
+
 class FyersProvider(Provider):
     """Fyers API v3. Daily login: open /login/fyers on the bridge."""
     name = "fyers"
@@ -380,6 +404,7 @@ class FyersProvider(Provider):
         out = {}
         items = list(keys)
         for i in range(0, len(items), 50):
+            _FYERS_RL.wait()
             r = self.f.quotes(data={"symbols": ",".join(items[i:i + 50])})
             for d in r.get("d", []):
                 v = d.get("v", {})
@@ -396,12 +421,19 @@ class FyersProvider(Provider):
         if is_us(symbol):
             return YahooProvider().history(symbol, days)
         end = dt.date.today()
-        start = end - dt.timedelta(days=int(days * 1.5))
+        start = end - dt.timedelta(days=int(days * 1.46))
         bars, cur = [], start
-        while cur < end:  # Fyers limits daily candles to ~1 year per request
-            nxt = min(cur + dt.timedelta(days=360), end)
-            r = self.f.history(data={"symbol": self._sym(symbol), "resolution": "D", "date_format": "1",
-                                     "range_from": cur.isoformat(), "range_to": nxt.isoformat(), "cont_flag": "1"})
+        while cur < end:  # Fyers limits daily candles to 366 days per request
+            nxt = min(cur + dt.timedelta(days=365), end)
+            for attempt in range(4):
+                _FYERS_RL.wait()
+                r = self.f.history(data={"symbol": self._sym(symbol), "resolution": "D", "date_format": "1",
+                                         "range_from": cur.isoformat(), "range_to": nxt.isoformat(), "cont_flag": "1"})
+                limited = isinstance(r, dict) and (r.get("code") in (429, -429) or "limit" in str(r.get("message", "")).lower())
+                if not limited:
+                    break
+                log.info("Fyers rate limit hit on %s, backing off", symbol)
+                time.sleep(5 * (attempt + 1))
             if not isinstance(r, dict) or r.get("s") not in ("ok", "no_data"):
                 msg = r.get("message") if isinstance(r, dict) else str(r)
                 raise HTTPException(502, f"Fyers history {self._sym(symbol)}: {msg} (code {r.get('code') if isinstance(r, dict) else '?'})")
