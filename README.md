@@ -1,5 +1,7 @@
 # DalalQuant — Indian markets terminal
 
+📘 **Complete manual (PDF):** [docs/dalalquant_manual.pdf](docs/dalalquant_manual.pdf) — documentation, tutorials and quizzes in one file.
+
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24334668.svg)](https://doi.org/10.5281/zenodo.24334668)
 
 **Live site:** https://gokaran-shukla.github.io/dalalquant
