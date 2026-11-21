@@ -88,3 +88,9 @@ pre.code{background:#0c1218;border:1px solid var(--ln);border-radius:7px;padding
 .cue{display:flex;gap:8px;padding:5px 0;border-bottom:1px solid #18222e;font-size:12.5px}.cue .d{width:16px;flex:none;font-weight:700}
 .wgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:8px}
 @media(max-width:1000px){.shell{flex-direction:column}nav#nav{width:auto;height:auto;position:static;flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--ln)}nav#nav .foot{display:none}nav#nav button{white-space:nowrap}.g2,.g2e,.g3{grid-template-columns:minmax(0,1fr)}.brand small{display:none}#clock{display:none}}
+/* Live Agent */
+.lvlist{max-height:420px;overflow:auto;display:flex;flex-direction:column;gap:4px}
+.lvev{padding:5px 8px;border-radius:6px;background:var(--p2);border-left:3px solid var(--ln);font-size:12.5px}
+.lvev.alert{border-left-color:var(--dn)}.lvev.watch{border-left-color:var(--wa)}.lvev.info{border-left-color:var(--ac)}
+.lvq{color:var(--cy);font-weight:600;margin-top:6px}
+.lva{background:var(--p2);border:1px solid var(--ln);border-radius:7px;padding:8px 10px;font-size:12.5px;line-height:1.55}

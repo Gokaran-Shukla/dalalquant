@@ -61,5 +61,33 @@
     "RELIANCE",
     "HDFCBANK",
     "INFY"
-  ]
+  ],
+  "live": {
+    "feed": "",
+    "throttle_ms": 250,
+    "poll_seconds": 2,
+    "sim_hz": 4
+  },
+  "agent": {
+    "autostart": false,
+    "watch_bse": false,
+    "watch_indices": [
+      "NIFTY 50",
+      "NIFTY BANK",
+      "SENSEX"
+    ],
+    "orb_minutes": 15,
+    "orb_buffer_pct": 0.05,
+    "vwap_z": 2.0,
+    "vwap_min_minutes": 20,
+    "fast_pct": 0.8,
+    "fast_window": 180,
+    "surge_mult": 4.0,
+    "surge_min_bars": 10,
+    "spread_bps": 25.0,
+    "cooldown": 600,
+    "notify_alerts": false,
+    "narrate": false,
+    "narrate_every": 300
+  }
 }

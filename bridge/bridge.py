@@ -22,6 +22,10 @@ Providers (set "broker" in config.json, or send header X-Broker):
     angel    – Angel One SmartAPI (pip install smartapi-python pyotp)
     groww    – Groww Trade API (pip install growwapi)
 
+Real-time streaming (/ws/live, /live/*, /agent/*): live_feed.py holds one push WebSocket to your broker
+(Fyers, Zerodha, Angel One) for NSE and BSE ticks; agent.py watches it (ORB, VWAP, volume, fast moves,
+NSE–BSE spread) and answers questions through Claude tools. Set "live.feed": "sim" to test after hours.
+
 Fundamentals (/fundamentals), world markets (/global) and news (/news) come from yfinance and
 public RSS feeds for every provider.  yfinance and RSS feeds are unofficial/free sources:
 check their terms of use, and expect gaps.
@@ -699,6 +703,7 @@ from contextlib import asynccontextmanager
 @asynccontextmanager
 async def _lifespan(_app):
     _start_scheduler()          # defined further down; runs once the server is up
+    _agent_autostart()          # live NSE/BSE stream for the agent, if enabled
     yield
 
 
@@ -994,6 +999,201 @@ async def ws_ticks(ws: WebSocket):
             await ws.close()
         except Exception:
             pass
+
+
+# ---- real-time NSE/BSE stream (live_feed.py) + market agent (agent.py) ------------
+import live_feed
+import agent as dq_agent
+
+
+def _live_feed_name() -> str:
+    return (cfg("live.feed") or cfg("force_broker") or cfg("broker", "yahoo")).lower()
+
+
+def _notify_send(title: str, text: str):
+    import notify
+    return notify.send(cfg, title, text)
+
+
+_LIVE_CTX = {"cfg": cfg, "token": today_token, "index_aliases": INDEX_ALIASES, "make_provider": lambda n: PROVIDERS[n]()}
+HUB = live_feed.FeedHub(lambda hub: live_feed.make_adapter(_live_feed_name(), hub, _LIVE_CTX), set(INDEX_ALIASES))
+AGENT = dq_agent.MarketAgent(HUB, cfg, _notify_send)
+
+
+def _agent_autostart():
+    """"agent.autostart": true → stream the config watchlist (NSE, plus BSE legs if "agent.watch_bse") from bridge start-up."""
+    if not cfg("agent.autostart", False):
+        return
+    syms = list(cfg("watchlist", [])) + list(cfg("agent.watch_indices", ["NIFTY 50", "NIFTY BANK", "SENSEX"]))
+    if cfg("agent.watch_bse", False):
+        syms += ["BSE:" + s for s in cfg("watchlist", [])]
+    try:
+        AGENT.watch(syms)
+        log.info("agent watching %d symbols on %s", len(syms), _live_feed_name())
+    except Exception as e:
+        log.warning("agent autostart: %s (log in to your broker, then POST /live/restart)", e)
+
+
+@app.websocket("/ws/live")
+async def ws_live(ws: WebSocket):
+    """Push stream of real NSE/BSE ticks from the broker WebSocket.
+
+    Query: ?symbols=RELIANCE,BSE:RELIANCE,NIFTY 50&token=…&throttle=250
+    Client → server: {"op":"sub","symbols":[…]} · {"op":"unsub","symbols":[…]}
+    Server → client: {"type":"hello"|"ticks"|"bar"|"event"|"note"|"status"|"error", …}
+      ticks: {"type":"ticks","d":{key: tick}} — coalesced to the latest tick per symbol every `throttle` ms
+    """
+    import asyncio
+    need = cfg("bridge_token")
+    if need and ws.query_params.get("token") != need:
+        await ws.close(code=4401)
+        return
+    await ws.accept()
+    loop = asyncio.get_running_loop()
+    mine: set[str] = set()
+    pending: dict[str, dict] = {}
+    outq: asyncio.Queue = asyncio.Queue(maxsize=2000)
+    throttle = min(2000, max(50, int(ws.query_params.get("throttle", cfg("live.throttle_ms", 250))))) / 1000
+
+    def _put(msg):
+        if not outq.full():
+            outq.put_nowait(msg)
+
+    def sink(kind, x):  # runs on the feed thread
+        if kind == "tick":
+            if x["k"] in mine:
+                loop.call_soon_threadsafe(pending.__setitem__, x["k"], x)
+        elif kind == "bar":
+            if x["k"] in mine:
+                loop.call_soon_threadsafe(_put, {"type": "bar", **{a: b for a, b in x.items() if a != "m"}})
+        elif kind == "event":
+            if x["k"] in mine or x["k"] == "*" or x["k"] in AGENT.owned:
+                loop.call_soon_threadsafe(_put, {"type": "event", "e": x})
+        elif kind in ("note", "status"):
+            loop.call_soon_threadsafe(_put, {"type": kind, **x})
+
+    async def sub(keys):
+        keys = [k for k in keys if k and k.strip()][:300]
+        try:
+            added = await loop.run_in_executor(None, HUB.subscribe, keys)
+            mine.update(added)
+            await ws.send_json({"type": "subscribed", "symbols": sorted(mine), "snapshot": HUB.snapshot(added)})
+        except Exception as e:
+            await ws.send_json({"type": "error", "error": f"{_live_feed_name()}: {e}"})
+
+    async def reader():
+        while True:
+            m = await ws.receive_json()
+            op, keys = m.get("op"), list(m.get("symbols") or [])
+            if op == "sub":
+                await sub(keys)
+            elif op == "unsub":
+                ks = [live_feed.canon(k, HUB.index_names) for k in keys]
+                HUB.unsubscribe([k for k in ks if k in mine])
+                mine.difference_update(ks)
+
+    async def writer():
+        while True:
+            try:
+                msg = await asyncio.wait_for(outq.get(), timeout=throttle)
+                await ws.send_json(msg)
+            except asyncio.TimeoutError:
+                pass
+            if pending:
+                d = dict(pending)
+                pending.clear()
+                await ws.send_json({"type": "ticks", "d": d})
+
+    HUB.listeners.append(sink)
+    try:
+        await ws.send_json({"type": "hello", "feed": _live_feed_name(), "status": HUB.status_dict(), "params": AGENT.params(),
+                            "events": AGENT.recent(limit=50)})
+        first = [s for s in (ws.query_params.get("symbols") or "").split(",") if s.strip()]
+        if first:
+            await sub(first)
+        tasks = [asyncio.create_task(reader()), asyncio.create_task(writer())]
+        done, rest = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+        for t in rest:
+            t.cancel()
+        for t in done:
+            if not t.cancelled() and t.exception() and not isinstance(t.exception(), (WebSocketDisconnect, RuntimeError)):
+                log.warning("ws/live: %s", t.exception())
+    except (WebSocketDisconnect, RuntimeError):
+        pass
+    finally:
+        try:
+            HUB.listeners.remove(sink)
+        except ValueError:
+            pass
+        if mine:
+            HUB.unsubscribe(list(mine))
+
+
+@app.get("/live/status", dependencies=[Depends(auth)])
+def live_status():
+    return {**HUB.status_dict(), "configured_feed": _live_feed_name(), "agent_watching": sorted(AGENT.owned)}
+
+
+@app.get("/live/snapshot", dependencies=[Depends(auth)])
+def live_snapshot(symbols: str = ""):
+    return {"quotes": AGENT.quotes([s for s in symbols.split(",") if s.strip()] or None)}
+
+
+@app.get("/live/bars", dependencies=[Depends(auth)])
+def live_bars(symbol: str, n: int = 120):
+    return {"bars": HUB.get_bars(symbol, min(max(n, 1), 400))}
+
+
+@app.post("/live/restart", dependencies=[Depends(auth)])
+def live_restart():
+    """Reconnect the feed (e.g. after the daily broker login)."""
+    try:
+        HUB.restart()
+        return HUB.status_dict()
+    except Exception as e:
+        raise HTTPException(502, str(e))
+
+
+class WatchIn(BaseModel):
+    symbols: list[str]
+
+
+@app.post("/agent/watch", dependencies=[Depends(auth)])
+def agent_watch(w: WatchIn):
+    """Symbols the agent keeps streaming (and alerting on) even with no page open."""
+    try:
+        return {"watching": AGENT.watch(w.symbols)}
+    except Exception as e:
+        raise HTTPException(502, f"{_live_feed_name()}: {e}")
+
+
+@app.get("/agent/events", dependencies=[Depends(auth)])
+def agent_events(since: int = 0, symbol: str | None = None, limit: int = 100):
+    return {"events": AGENT.recent(symbol, min(limit, 1000), since)}
+
+
+@app.get("/agent/params", dependencies=[Depends(auth)])
+def agent_params_get():
+    return AGENT.params()
+
+
+@app.post("/agent/params", dependencies=[Depends(auth)])
+async def agent_params_set(request: Request):
+    return AGENT.set_params(await request.json())
+
+
+class AgentAskIn(BaseModel):
+    question: str
+    history: list[dict] | None = None
+
+
+@app.post("/agent/ask", dependencies=[Depends(auth)])
+def agent_ask(a: AgentAskIn):
+    """Ask the live-market agent a question; it reads the stream through tools (read-only, no orders)."""
+    try:
+        return AGENT.ask(a.question, a.history)
+    except RuntimeError as e:
+        raise HTTPException(400, str(e))
 
 
 # ---- mutual funds (mfapi.in, AMFI data) · IPOs ---------------------------------
@@ -1393,6 +1593,14 @@ def ai(a: AiIn):
 
 
 # ---- daily broker logins ------------------------------------------------------
+def _restart_live_if(broker: str):
+    if _live_feed_name() == broker and (HUB.subscribed() or AGENT.owned):
+        try:
+            HUB.restart()
+        except Exception as e:
+            log.warning("live feed restart after %s login: %s", broker, e)
+
+
 @app.get("/login/zerodha")
 def login_zerodha():
     from kiteconnect import KiteConnect
@@ -1405,6 +1613,7 @@ def callback_zerodha(request_token: str):
     k = KiteConnect(api_key=cfg("zerodha.api_key"))
     s = k.generate_session(request_token, api_secret=cfg("zerodha.api_secret"))
     save_token("zerodha", s["access_token"])
+    _restart_live_if("zerodha")
     return JSONResponse({"status": "Zerodha session saved for today. You can close this tab."})
 
 
@@ -1424,6 +1633,7 @@ def callback_fyers(auth_code: str):
     if "access_token" not in r:
         raise HTTPException(400, str(r))
     save_token("fyers", r["access_token"])
+    _restart_live_if("fyers")
     return JSONResponse({"status": "Fyers session saved for today. You can close this tab."})
 
 

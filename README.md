@@ -18,6 +18,7 @@ DalalQuant is a single-page terminal covering investing, trading and algo tradin
 | **News & Events** | Live RSS headlines (through the bridge), auto-tagged by topic (Fed, RBI, crude, tariffs, geopolitics, earnings, FII flows…) with impact, tone, affected sectors and mentioned stocks; ⚡ flash bar for high-impact news; recurring market-moving events |
 | **Ask · Company Enquiry** | Type any company to get one dossier covering: a plain-English summary; an **investor call** (ACCUMULATE / HOLD / WAIT / EXIT) and a trader signal; entry zone, stop-loss, targets and exit triggers; past track record vs the index; present valuation and quality; **3-year bear/base/bull scenarios** with implied prices; growth drivers and risks; company events (estimated results date, plus dividends, splits and earnings dates through the bridge); company news; and an **AI analyst** you can ask free-form questions (through the bridge with your Anthropic API key) |
 | **Large · Mid · Small cap** | Splits stocks into large, mid and small caps using the SEBI/AMFI rule (by live market-cap rank once real data is loaded, otherwise by index membership). Each pool gets: a plain-English summary; **best stocks to ENTER** (entry zone, stop, targets) and **stocks to EXIT** (with reasons); past returns vs NIFTY; present breadth, valuation and quality; future prospects (median growth, upside to fair value, base-case 3-year return); a side-by-side comparison flagging which pool screens best now; **government decisions affecting stocks in the pool** (and live headlines); and a top-25 leaderboard. Rankings can be filtered by pool |
+| **Live Agent · NSE/BSE stream** | Push-based real-time ticks for NSE **and** BSE through the bridge's `/ws/live` socket, fed by one broker market-data WebSocket (Fyers, Zerodha KiteTicker or Angel One SmartAPI; other brokers fall back to polling). Live table with bid/ask, volume, OI and the **NSE↔BSE price gap** for dual-listed stocks. A rule-based **market agent** watches every tick for opening-range breaks, VWAP ±2σ stretches, fast moves, 1-minute volume surges, new day highs/lows, NSE–BSE gaps and a frozen feed, and can keep watching (and alert by Telegram/email) with the page closed. **Ask the agent** questions in plain English: Claude reads the live stream through tools (read-only, no orders) |
 | **Intraday** | 1/3/5/15/30-minute candles (from your broker or Yahoo via the bridge), VWAP with ±1σ/±2σ bands, opening-range high/low, classic pivots and CPR, market profile (POC and value area), intraday RSI, relative volume by time of day, live time-and-sales via the bridge WebSocket, and intraday backtests (opening-range breakout, VWAP ±2σ mean reversion) with MIS charges and a 15:15 square-off |
 | **Institutional Desk (FII/DII)** | A pre-trade committee for any order size and fund AUM: SEBI-style checks (10% single-stock limit, sector cap, liquidity, impact, valuation, earnings quality, signal, beta) with an APPROVE / LIMITS / REJECT verdict; liquidity (ADV, % of ADV, days to build, square-root market impact, Roll and Corwin-Schultz spreads, Amihud); Almgren-Chriss vs TWAP execution and intraday VWAP slicing; reverse DCF (growth priced in); forensic earnings quality; Barra-style multi-factor risk model (6 styles + sectors) with factor vs specific risk, ex-ante tracking error and active share; Black-Litterman NIFTY 50 allocation with a 10% cap; 8 stress scenarios; Brinson attribution; FII/DII ownership-flow tracker |
 | **Event-Driven Edge** | **NIFTY 50 inclusion/exclusion predictor** applying NSE's rule (6-month average free-float market cap ≥ 1.5× the smallest constituent; reviews in March and September), with estimated weights, passive buying/selling and days of ADV. **Post-earnings drift** event study (average cumulative abnormal returns after large results-season surprises, with fresh candidates). **Special situations** from NSE announcements (buybacks, open offers, delistings, demergers, mergers, bonuses, splits) and a buyback-arbitrage calculator; the **F&O ban list**; and a **guidance tracker** (manual or AI-extracted from uploaded documents) scoring management credibility |
@@ -66,6 +67,20 @@ Next, open the site and go to **Algo & Brokers**. Pick your broker, keep the URL
 - For a Zerodha or Fyers daily login, open `http://127.0.0.1:8765/login/zerodha` (or `/login/fyers`) once a day.
 - Start with `"broker": "yahoo"`. It needs no keys and gives delayed data, which is a good way to check that everything works.
 - **NSE official end-of-day data:** choose *NSE official EOD* as the source and click **Sync NSE files** (Data & Settings). The bridge downloads ~3 years of NSE bhavcopies (prices + delivery %) and 60 days of F&O bhavcopies into `bridge/cache/`, adjusts for splits/bonuses, and powers: delivery-% analysis, FII/DII daily flows, bulk/block deals, insider (SEBI PIT) trades, promoter pledges, OI build-up and rollover. Requests are throttled and cached; this is for personal use, so check NSE's terms of use.
+
+### Real-time stream and the market agent
+
+The bridge holds one streaming connection to your broker (`bridge/live_feed.py`) and fans ticks out to every open DalalQuant page and to the agent (`bridge/agent.py`).
+
+- Set `"live": {"feed": "fyers"}` (or `zerodha` / `angel`) in `config.json`. If it is not set, your `broker` is used; brokers without a streaming API are polled. Use `"feed": "sim"` to test after hours: ticks are simulated and flagged **SIM** everywhere.
+- Symbols: `RELIANCE` is NSE, `BSE:RELIANCE` is BSE, and index names such as `NIFTY 50` or `SENSEX` work as usual.
+- After the daily broker login (`/login/fyers`, `/login/zerodha`) the stream reconnects by itself. You can also call `POST /live/restart`.
+- Open **Live Agent** and click **Start stream**. To keep the agent watching with the page closed, click **Agent: watch with page closed**, or set `"agent": {"autostart": true}` to stream your config `watchlist` from start-up.
+- Ask the agent questions with `anthropic_api_key` set. It answers from the live data through tools, and it cannot place orders.
+
+Endpoints: `WS /ws/live` (`{"op":"sub"|"unsub","symbols":[…]}`), `GET /live/status`, `GET /live/snapshot`, `GET /live/bars`, `POST /live/restart`, `POST /agent/watch`, `GET /agent/events`, `GET|POST /agent/params`, `POST /agent/ask`.
+
+Direct exchange feeds (NSE NNF/TBT, BSE EOBI) are only available to exchange members and licensed vendors, so retail real-time NSE/BSE data comes through a broker API or a licensed vendor. Check your broker's API terms for data use.
 
 **Safety:**
 - API secrets stay in `config.json` on your machine. It is git-ignored.
@@ -127,6 +142,7 @@ When you add a new `js/NN-*.js` file, add its `<script>` tag before `js/99-boot.
 - `bridge/nse_data.py`: NSE bhavcopy, F&O, FII/DII, deals, insider and pledge loaders; `bridge/notify.py`: Telegram/email/WhatsApp and the alert/brief scheduler
 - `tests/`: JS (jsdom) and Python unit tests · `deploy/`: Docker + Caddy cloud bridge · `.github/workflows/ci.yml`: CI
 - `bridge/bridge.py`: FastAPI bridge (REST contract documented in the Algo tab)
+- `bridge/live_feed.py`: real-time NSE/BSE feed hub (Fyers, Zerodha, Angel One streams; polling and simulated fallbacks); `bridge/agent.py`: market agent (detectors + Claude tool-use Q&A)
 - `bridge/config.example.json`, `bridge/requirements.txt`
 
 ## Citing DalalQuant
