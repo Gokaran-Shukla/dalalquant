@@ -13,4 +13,4 @@ jobs:
         with: { python-version: "3.12" }
       - run: pip install -r bridge/requirements.txt pytest
       - run: python -m pytest -q tests
-      - run: python -c "import ast,sys; [ast.parse(open(f).read()) for f in ['bridge/bridge.py','bridge/nse_data.py','bridge/notify.py']]"
+      - run: python -c "import ast,sys; [ast.parse(open(f).read()) for f in ['bridge/bridge.py','bridge/nse_data.py','bridge/notify.py','bridge/live_feed.py','bridge/agent.py']]"
