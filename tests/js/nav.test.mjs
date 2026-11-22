@@ -12,7 +12,8 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8')
   .replace(/<script src="(js\/[^"]+)"><\/script>/g, (_, f) => `<script>${fs.readFileSync(path.join(root, f), 'utf8')}</script>`);
 const vc = new VirtualConsole(); const errors = [];
 vc.on('jsdomError', e => { if (!/getContext|Not implemented/.test(e.message)) errors.push(e.message); });
-const dom = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://gokaran-shukla.github.io/dalalquant/', virtualConsole: vc });
+const dom = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://gokaran-shukla.github.io/dalalquant/', virtualConsole: vc,
+  beforeParse(win) { win.matchMedia = () => ({ matches: false, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {} }); } });
 const w = dom.window, d = w.document, ev = c => w.eval(c);
 after(() => w.close());
 
@@ -83,5 +84,16 @@ test('Portfolio tab: header and summary tiles', () => {
   assert.ok(t.querySelector('.phead h1'));
   assert.equal(t.querySelectorAll('.stiles .stile').length, 6);
   assert.ok(t.querySelector('#hSym') && t.querySelector('[data-act="hAdd"]'));
+  assert.deepEqual(errors, []);
+});
+
+test('every section renders with a page header and no errors', () => {
+  const ids = JSON.parse(ev('JSON.stringify(TABS.map(t=>t[0]))'));
+  for (const id of ids) {
+    ev(`go('${id}')`);
+    const sec = d.querySelector('#tab-' + id);
+    assert.ok(sec.querySelector(':scope > .phead'), 'header in ' + id);
+    assert.ok(!sec.querySelector('.card.err'), 'render error in ' + id);
+  }
   assert.deepEqual(errors, []);
 });
