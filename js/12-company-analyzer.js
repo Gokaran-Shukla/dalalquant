@@ -12,6 +12,7 @@ function renderAnalyze(){
   <div><span class="big">${CUR(s.sym)}${fN(m.price)}</span> <span class="n" style="font-size:14px">${m.chg>=0?'<span class=up>+':'<span class=dn>'}${fN(m.chg)}</span> ${fP(m.chgp,2)}</span></div>
   <div class="spacer"></div><div class="row"><button class="btn s xs" data-act="toEnq">Ask / dossier</button><button class="btn s xs" data-act="toIntra">Intraday</button><button class="btn s xs" data-act="toQuant">Quant forecast</button><button class="btn s xs" data-act="toInst">Institutional check</button><button class="btn s xs" data-act="toBacktest">Backtest</button><button class="btn s xs" data-act="toTicket">Trade</button><button class="btn s xs" data-act="addHold">+ Portfolio</button><button class="btn xs" data-act="report">Report</button></div></div></div>
  <div class="g2"><div class="card"><h3>Chart <span class="r row" style="text-transform:none;letter-spacing:0">${[[63,'3M'],[126,'6M'],[252,'1Y'],[504,'2Y'],[9999,'Max']].map(([v,l])=>`<button class="btn xs ${A.tf===v?'on':'s'}" data-tf="${v}">${l}</button>`).join('')}</span></h3>
+  ${tfRow(A.agg||'D',s.sym)}
   <div class="row" style="margin-bottom:6px">${[['sma50','SMA 50','#f59e0b'],['sma200','SMA 200','#a78bfa'],['ema20','EMA 20','#22d3ee'],['bb','Bollinger','#4F8CFF'],['st','Supertrend','#f472b6']].map(([k,l,c])=>`<label class="c"><input type="checkbox" data-ov="${k}" ${A.ov[k]?'checked':''}><span style="color:${c}">${l}</span></label>`).join('')}
   <select id="anSub">${[['rsi','RSI (14)'],['macd','MACD (12,26,9)'],['vol','Volume'],['none','No sub-panel']].map(([k,l])=>`<option value="${k}" ${A.sub===k?'selected':''}>${l}</option>`).join('')}</select></div>
   <div class="readout" id="anRead"></div><canvas class="chart" id="anChart"></canvas></div>
@@ -46,7 +47,7 @@ function renderAnalyze(){
   const yoy=q.map((x,i)=>{const k=d.q.length-12+i;return k>=4?x.rev/d.q[k-4].rev-1:null});barChart($('#gChart'),q.map(x=>x.p),[{data:yoy.map(v=>v==null?null:v*100),color:(v)=>v>=0?'#34D399':'#F87171',label:'Sales YoY %'}],{yfmt:v=>v.toFixed(0)+'%'})}
 }
 function kv(k,v,sign){return `<div><div class="k">${k}</div><div class="v ${sign==null?'':sign>=0?'up':'dn'}">${v}</div></div>`}
-function drawAnChart(){const d=S.D[S.sel];if(!d)return;const A=S.an;const all=d.bars,off=Math.max(0,all.length-A.tf);const b=all.slice(off),c=all.map(x=>x.c);const cut=a=>a.slice(off);const ovs=[];
+function drawAnChart(){const d=S.D[S.sel];if(!d)return;const A=S.an;const agg=A.agg||'D';const all=aggBars(d.bars,agg),off=Math.max(0,all.length-Math.ceil(A.tf/(agg==='W'?5:agg==='M'?21:1)));const b=all.slice(off),c=all.map(x=>x.c);const cut=a=>a.slice(off);const ovs=[];
  if(A.ov.sma50)ovs.push({data:cut(sma(c,50)),color:'#f59e0b'});if(A.ov.sma200)ovs.push({data:cut(sma(c,200)),color:'#a78bfa'});if(A.ov.ema20)ovs.push({data:cut(ema(c,20)),color:'#22d3ee'});
  let bands=null;if(A.ov.bb){const B=bollA(c);bands={up:cut(B.up),lo:cut(B.lo)};ovs.push({data:cut(B.mid),color:'#4F8CFF',dash:[4,3]})}
  if(A.ov.st){const st=stA(all);ovs.push({data:cut(st.line),color:'#f472b6',w:1.6})}

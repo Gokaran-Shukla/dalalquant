@@ -14,6 +14,8 @@ The sections below are grouped into eight tabs: **Markets, Charts, F&O, Quant, P
 
 **Power-user features:** press **Ctrl/⌘ K** for a command palette that jumps to any section, stock or action, with your recently viewed stocks at the top. Press **?** for all keyboard shortcuts: `/` searches, `g m` goes to Markets, `g o` to the option chain, `g p` to Portfolio, and `[` / `]` move between sections in a tab. Every chart has a **Download PNG** button.
 
+**Chart intervals:** the Intraday and Company charts share one interval bar: **1s, 5s, 10s, 15s, 30s · 1m, 2m, 3m, 5m, 10m, 15m, 30m, 45m · 1h, 2h, 4h · 1D, 1W, 1M**. With the bridge connected, minute and hour candles come from your broker (unusual sizes such as 2m, 10m, 45m, 2h and 4h are built from 1/5/15/60-minute data). Second candles are built live from ticks. Without the bridge, all intervals use simulated data. 1W and 1M aggregate the daily chart.
+
 **Personal touches:** the app opens on **My Dashboard**, where you can add, remove and drag widgets (indices, watchlist, movers, heatmap, portfolio, breadth, opportunities, headlines, alerts). It has a **light/dark theme** switch, a **bell** that shows unread alerts and live alert notifications, a **+ Alert** button on every company page, and **Compare Stocks** for up to four stocks side by side (relative performance chart plus valuation, quality and signal table, with the best value in each row highlighted).
 
 | Section | Highlights |

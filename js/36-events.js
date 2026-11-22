@@ -84,7 +84,7 @@ document.addEventListener('click',e=>{const t=e.target;const tab=t.closest('[dat
   wfoRun(){S.res.folds=Math.max(2,Math.min(10,+$('#wfK').value||5));toast('Running walk-forward…');setTimeout(()=>{if(wfo())renderBacktest()},20)},
   mcRun(){if(mcTrades())renderBacktest()},
   portRun(){if(stratPortfolio())renderBacktest()},
-  idLoad(){const I=S.id;const v=$('#idSym').value.trim().toUpperCase();if(!undBars(v)){toast('Unknown symbol');return}I.sym=v;I.iv=+$('#idIv').value;I.days=Math.max(1,Math.min(30,+$('#idDays').value||5));I.orb=Math.max(I.iv,+$('#idOrb').value||15);I.tape=[];streamTicks(false);loadIntraday()},
+  idLoad(){const I=S.id;const v=$('#idSym').value.trim().toUpperCase();if(!undBars(v)){toast('Unknown symbol');return}I.sym=v;I.ivs=I.ivs||300;I.iv=I.ivs/60;I.days=Math.max(1,Math.min(30,+$('#idDays').value||5));I.orb=Math.max(I.iv,+$('#idOrb').value||15);I.tape=[];streamTicks(false);loadIntraday()},
   idBT(){S.id.strat=$('#idStrat').value;S.id.rr=+$('#idRR').value||2;S.id.res=null;intradayBT();renderIntraday()},
   toIntra(){S.id.sym=S.sel;S.id.bars=null;go('intraday');loadIntraday()},
   foLoad(){toast('Loading NSE F&O data…');foLoad()},
