@@ -102,7 +102,7 @@ a:hover{color:var(--ac2)}
 header.top{gap:16px;padding:10px 20px;background:#0E131D;flex-wrap:wrap}
 .brand{display:flex;align-items:center;gap:10px;color:var(--tx);font-size:20px;font-weight:700;letter-spacing:-.02em}
 .brand:hover{text-decoration:none;color:var(--tx)}
-.brand svg rect{fill:var(--ac)}
+.brand img{display:block;border-radius:9px;flex:none}
 #gnav{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;flex:1 1 auto;min-width:0}
 #gnav::-webkit-scrollbar{display:none}
 #gnav button{all:unset;display:flex;align-items:center;gap:7px;padding:9px 13px;border-radius:9px;color:var(--mu);font-weight:500;font-size:14px;cursor:pointer;white-space:nowrap}
