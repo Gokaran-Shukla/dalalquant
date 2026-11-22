@@ -12,7 +12,8 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8')
   .replace(/<script src="(js\/[^"]+)"><\/script>/g, (_, f) => `<script>${fs.readFileSync(path.join(root, f), 'utf8')}</script>`);
 const vc = new VirtualConsole(); const errors = [];
 vc.on('jsdomError', e => { if (!/getContext|Not implemented/.test(e.message)) errors.push(e.message); });
-const dom = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://gokaran-shukla.github.io/dalalquant/', virtualConsole: vc });
+const dom = new JSDOM(html, { runScripts: 'dangerously', pretendToBeVisual: true, url: 'https://gokaran-shukla.github.io/dalalquant/', virtualConsole: vc,
+  beforeParse(win) { win.matchMedia = () => ({ matches: false, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {} }); } });
 const w = dom.window, d = w.document, ev = c => w.eval(c);
 after(() => w.close());
 
@@ -50,5 +51,49 @@ test('More sheet lists every section and closes on pick', () => {
   d.querySelector('#modal .mgb[data-tab="journal"]').click();
   assert.equal(ev('S.tab'), 'journal');
   assert.equal(d.querySelector('#modal').style.display, 'none');
+  assert.deepEqual(errors, []);
+});
+
+test('F&O tab: stat tiles, chain, and payoff + risk summary after a preset', () => {
+  ev("go('options')");
+  const t = d.querySelector('#tab-options');
+  assert.ok(t.querySelectorAll('.stile').length >= 6);
+  assert.ok(t.querySelector('.kp.atm'), 'ATM strike highlighted');
+  const pre = t.querySelector('[data-optpreset]');
+  pre.click();
+  const t2 = d.querySelector('#tab-options');
+  assert.ok(t2.querySelector('#payChart'), 'payoff chart');
+  assert.ok(t2.querySelectorAll('.rsum > div').length === 5, 'risk summary rows');
+  assert.ok(t2.querySelector('[data-act="legOrder"]'));
+  assert.deepEqual(errors, []);
+});
+
+test('Markets tab: header, index cards, heatmap beside breadth, three mover lists', () => {
+  ev("go('markets')");
+  const t = d.querySelector('#tab-markets');
+  assert.ok(t.querySelector('.phead h1'));
+  assert.ok(t.querySelectorAll(':scope > .idxgrid .ic').length >= 4);
+  assert.ok(t.querySelector('.frow .fmain .hm') && t.querySelector('.frow .fside #mkAD'));
+  assert.equal(t.querySelectorAll('.g3 > .card').length, 3);
+  assert.deepEqual(errors, []);
+});
+
+test('Portfolio tab: header and summary tiles', () => {
+  ev("go('portfolio')");
+  const t = d.querySelector('#tab-portfolio');
+  assert.ok(t.querySelector('.phead h1'));
+  assert.equal(t.querySelectorAll('.stiles .stile').length, 6);
+  assert.ok(t.querySelector('#hSym') && t.querySelector('[data-act="hAdd"]'));
+  assert.deepEqual(errors, []);
+});
+
+test('every section renders with a page header and no errors', () => {
+  const ids = JSON.parse(ev('JSON.stringify(TABS.map(t=>t[0]))'));
+  for (const id of ids) {
+    ev(`go('${id}')`);
+    const sec = d.querySelector('#tab-' + id);
+    assert.ok(sec.querySelector(':scope > .phead'), 'header in ' + id);
+    assert.ok(!sec.querySelector('.card.err'), 'render error in ' + id);
+  }
   assert.deepEqual(errors, []);
 });
