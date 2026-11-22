@@ -14,6 +14,8 @@ The sections below are grouped into eight tabs: **Markets, Charts, F&O, Quant, P
 
 **Power-user features:** press **Ctrl/⌘ K** for a command palette that jumps to any section, stock or action, with your recently viewed stocks at the top. Press **?** for all keyboard shortcuts: `/` searches, `g m` goes to Markets, `g o` to the option chain, `g p` to Portfolio, and `[` / `]` move between sections in a tab. Every chart has a **Download PNG** button.
 
+**Personal touches:** the app opens on **My Dashboard**, where you can add, remove and drag widgets (indices, watchlist, movers, heatmap, portfolio, breadth, opportunities, headlines, alerts). It has a **light/dark theme** switch, a **bell** that shows unread alerts and live alert notifications, a **+ Alert** button on every company page, and **Compare Stocks** for up to four stocks side by side (relative performance chart plus valuation, quality and signal table, with the best value in each row highlighted).
+
 | Section | Highlights |
 |---|---|
 | **India Markets** | Daily written briefing; all major NSE/BSE indices with sparklines; derived India VIX; breadth; sector heatmap; top gainers and losers; **Opportunities** (strong businesses well below their highs), which also pop up each time you open the terminal |
