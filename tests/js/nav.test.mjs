@@ -52,3 +52,36 @@ test('More sheet lists every section and closes on pick', () => {
   assert.equal(d.querySelector('#modal').style.display, 'none');
   assert.deepEqual(errors, []);
 });
+
+test('F&O tab: stat tiles, chain, and payoff + risk summary after a preset', () => {
+  ev("go('options')");
+  const t = d.querySelector('#tab-options');
+  assert.ok(t.querySelectorAll('.stile').length >= 6);
+  assert.ok(t.querySelector('.kp.atm'), 'ATM strike highlighted');
+  const pre = t.querySelector('[data-optpreset]');
+  pre.click();
+  const t2 = d.querySelector('#tab-options');
+  assert.ok(t2.querySelector('#payChart'), 'payoff chart');
+  assert.ok(t2.querySelectorAll('.rsum > div').length === 5, 'risk summary rows');
+  assert.ok(t2.querySelector('[data-act="legOrder"]'));
+  assert.deepEqual(errors, []);
+});
+
+test('Markets tab: header, index cards, heatmap beside breadth, three mover lists', () => {
+  ev("go('markets')");
+  const t = d.querySelector('#tab-markets');
+  assert.ok(t.querySelector('.phead h1'));
+  assert.ok(t.querySelectorAll(':scope > .idxgrid .ic').length >= 4);
+  assert.ok(t.querySelector('.frow .fmain .hm') && t.querySelector('.frow .fside #mkAD'));
+  assert.equal(t.querySelectorAll('.g3 > .card').length, 3);
+  assert.deepEqual(errors, []);
+});
+
+test('Portfolio tab: header and summary tiles', () => {
+  ev("go('portfolio')");
+  const t = d.querySelector('#tab-portfolio');
+  assert.ok(t.querySelector('.phead h1'));
+  assert.equal(t.querySelectorAll('.stiles .stile').length, 6);
+  assert.ok(t.querySelector('#hSym') && t.querySelector('[data-act="hAdd"]'));
+  assert.deepEqual(errors, []);
+});

@@ -181,3 +181,24 @@ table.t tr.cl:hover td{background:var(--p3)}
 .big{font-size:28px}
 .badge{border-radius:6px}
 #tape{font-size:12px;height:30px;line-height:30px}
+/* v2 section layouts */
+.phead{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+.phead h1{margin:0;font-size:28px;font-weight:700;letter-spacing:-.02em}
+.phead .sub{margin:6px 0 0;font-size:13.5px}
+.stiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:14px}
+.stile{background:var(--p);border:1px solid var(--ln);border-radius:14px;padding:14px 16px;min-width:0}
+.stile .k{font-size:12px;color:var(--mu);margin-bottom:6px}.stile .v{font-family:'JetBrains Mono',monospace;font-size:21px;font-weight:600}.stile .s{font-size:12px;color:var(--mu);margin-top:4px}
+.setbox summary{cursor:pointer;list-style:none}.setbox summary::-webkit-details-marker{display:none}.setbox summary::before{content:'▸ ';color:var(--mu)}.setbox[open] summary::before{content:'▾ '}
+h2.sech{font-size:20px;font-weight:700;margin:22px 0 12px;letter-spacing:-.01em}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.chips .btn{height:36px;padding:0 14px}
+.frow{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start}
+.frow .fmain{flex:999 1 560px;min-width:0}.frow .fside{flex:1 1 300px;min-width:0}
+.rsum>div,.gk>div{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid #182030;font-size:13px}
+.rsum span,.gk span{color:var(--mu)}.rsum b,.gk b{font-family:'JetBrains Mono',monospace;font-size:14px;text-align:right}
+.gk{display:grid;grid-template-columns:1fr 1fr;gap:8px}.gk>div{flex-direction:column;gap:2px;background:var(--p2);border:0;border-radius:10px;padding:10px 12px}.gk b{text-align:left;font-size:16px}
+@media(max-width:820px){.phead h1{font-size:22px}.stiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+#tab-markets>.idxgrid{margin-bottom:14px}
+#tab-markets .ic{background:var(--p)}
+@media(max-width:1100px){.g3{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:820px){#tab-markets>.idxgrid{display:flex;overflow-x:auto;scrollbar-width:none}#tab-markets>.idxgrid .ic{flex:0 0 170px}}
