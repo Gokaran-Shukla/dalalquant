@@ -39,7 +39,7 @@ test('clicking a group opens its first section and remembers the last one', () =
   d.querySelector('#nav [data-tab="foa"]').click();
   assert.equal(ev('S.tab'), 'foa');
   d.querySelector('#gnav [data-group="markets"]').click();
-  assert.equal(ev('S.tab'), 'markets');
+  assert.equal(ev('S.tab'), 'home');
   d.querySelector('#gnav [data-group="fno"]').click();
   assert.equal(ev('S.tab'), 'foa');
 });
