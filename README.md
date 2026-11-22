@@ -12,6 +12,8 @@ DalalQuant is a single-page terminal covering investing, trading and algo tradin
 
 The sections below are grouped into eight tabs: **Markets, Charts, F&O, Quant, Portfolio, Screener, Backtest and Setup**. Each tab has its own row of section buttons. On phones a bottom bar gives Markets, Charts, F&O, Portfolio and a **More** sheet listing every section.
 
+**Power-user features:** press **Ctrl/⌘ K** for a command palette that jumps to any section, stock or action, with your recently viewed stocks at the top. Press **?** for all keyboard shortcuts: `/` searches, `g m` goes to Markets, `g o` to the option chain, `g p` to Portfolio, and `[` / `]` move between sections in a tab. Every chart has a **Download PNG** button.
+
 | Section | Highlights |
 |---|---|
 | **India Markets** | Daily written briefing; all major NSE/BSE indices with sparklines; derived India VIX; breadth; sector heatmap; top gainers and losers; **Opportunities** (strong businesses well below their highs), which also pop up each time you open the terminal |
