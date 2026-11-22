@@ -148,3 +148,36 @@ input,select,textarea{border-radius:8px}
  #bnav button.on{color:var(--ac);font-weight:600}
  #toast{bottom:88px}
 }
+/* v2 look inside sections */
+.card>h3 .r.mu,.card>h3 .mu{font-family:Inter,system-ui,sans-serif;font-weight:500;font-size:12px}
+.idxgrid{grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.ic{background:var(--p2);border-color:var(--ln);padding:14px 16px;transition:border-color .15s}
+.ic:hover{border-color:var(--ac)}
+.ic .nm{font-size:12px;font-weight:500;letter-spacing:.01em}
+.ic .lv{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:21px;font-weight:600;margin-top:4px}
+.ic canvas{height:40px;margin-top:8px}
+.hm{gap:8px}.hm div{border-radius:10px;padding:12px;min-height:58px}.hm b{font-family:'JetBrains Mono',monospace;font-size:15px;margin-top:4px}
+.oc{background:var(--p2);border:1px solid #1F4D3D;border-radius:12px;padding:12px 14px}.oc:hover{border-color:var(--up)}
+.oc .why{color:var(--mu)}
+.kv>div{background:var(--p2);padding:9px 11px}.kv .k{text-transform:none;letter-spacing:0;font-size:11.5px}.kv .v{font-size:15px;font-weight:600}
+table.t{font-size:13px}
+table.t th{background:var(--p);font-size:11.5px;text-transform:none;letter-spacing:0;font-weight:500;padding:9px 10px}
+table.t td{padding:8px 10px;border-bottom-color:#182030}
+table.t tr.cl:hover td{background:var(--p3)}
+.pill{border-radius:7px;padding:3px 9px}
+.tabs2{gap:6px;border-bottom:0;padding:0;margin-bottom:14px}
+.tabs2 button{padding:7px 13px;border-radius:999px;border:1px solid var(--ln);background:var(--p)}
+.tabs2 button.on{background:var(--p3);border-color:var(--ac);box-shadow:none}
+.chain td{padding:6px 8px;font-size:12.5px}
+.chain td.itm{background:rgba(245,165,36,.07)}
+.chain td.k{background:transparent;text-align:center}
+.chain .kp{display:inline-flex;flex-direction:column;align-items:center;min-width:70px;padding:5px 8px;border-radius:8px;background:var(--p3);font-family:'JetBrains Mono',monospace;font-weight:700}
+.chain .kp.atm{background:var(--ac);color:var(--ink)}
+.chain .kp small{font-size:9.5px;font-weight:700;letter-spacing:.04em}
+.chain tr.atmrow td{border-top:1px solid rgba(245,165,36,.45);border-bottom:1px solid rgba(245,165,36,.45)}
+.chain td.px:hover{background:#2A3550}
+.oibar{height:5px;opacity:.75}
+[data-optpreset]{border-radius:999px}
+.big{font-size:28px}
+.badge{border-radius:6px}
+#tape{font-size:12px;height:30px;line-height:30px}
