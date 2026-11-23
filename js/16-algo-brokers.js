@@ -51,8 +51,8 @@ async function verifyAndLoad(){const B=S.bridge;B.data='checking';B.dataErr=null
 function dataHelp(msg){const B=S.bridge;const u=B.url.replace(/\/$/,'');const br=B.broker;const login=['fyers','zerodha'].includes(br)?`${u}/login/${br}`:null;
  modal(`<div class="h3">Bridge connected, but no real prices yet</div><p class="sub">The bridge answered, but ${esc(br)} did not return market data: <b>${esc(msg||'unknown error')}</b></p>
  <ol class="fixlist">${login?`<li><b>Log in to ${br==='fyers'?'Fyers':'Zerodha'} for today</b> — tokens expire every day. <a class="btn xs" href="${esc(login)}" target="_blank" rel="noopener">Open ${esc(login)}</a></li>`:''}
- <li><b>Check <code>bridge/config.json</code></b>: <code>"broker": "${esc(br)}"</code> and your API keys (for Fyers: <code>fyers_app_id</code>, <code>fyers_secret</code>, redirect URL <code>${esc(u)}/login/fyers/callback</code>).</li>
- <li><b>Check the bridge terminal</b> for an error line — it names the exact problem (wrong key, missing SDK such as <code>pip install fyers-apiv3</code>, rate limit).</li>
+ <li><b>Check <code>bridge/config.json</code></b>: <code>"broker": "${esc(br)}"</code> and your API keys (for Fyers: <code>"fyers": {"client_id": "XXXXXXXX-100", "secret_key": "…"}</code>, and the Redirect URL in your Fyers app must be <code>${esc(u)}/callback/fyers</code>).</li>
+ <li><b>Check the bridge terminal</b> for an error line — it names the exact problem (wrong key, missing library — run <code>pip install fyers-apiv3</code> in the bridge's .venv, rate limit).</li>
  <li>Then press <b>Retry</b>.</li></ol>
  <div class="row" style="margin-top:12px"><button class="btn" data-act2="retryData">Retry</button><button class="btn s" data-act2="useYahoo">Use free Yahoo data instead</button></div>`)}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-act2]');if(!b)return;const a=b.dataset.act2;if(a==='retryData'){e.preventDefault();closeModal();verifyAndLoad()}else if(a==='useYahoo'){e.preventDefault();closeModal();S.bridge.broker='yahoo';SS.set('dq_bridge',{url:S.bridge.url,broker:'yahoo',token:S.bridge.token});connectBridge()}});
