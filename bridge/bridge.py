@@ -50,7 +50,7 @@ from typing import Any
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
 
 log = logging.getLogger("dalalquant.bridge")
@@ -1617,24 +1617,67 @@ def callback_zerodha(request_token: str):
     return JSONResponse({"status": "Zerodha session saved for today. You can close this tab."})
 
 
+def _setup_page(title: str, steps: list[str], code: int = 400) -> HTMLResponse:
+    items = "".join(f"<li>{x}</li>" for x in steps)
+    return HTMLResponse(f"""<!doctype html><meta charset=utf-8><title>DalalQuant bridge</title>
+<body style="font:15px/1.6 system-ui,sans-serif;background:#0B0F17;color:#E6EAF2;max-width:720px;margin:40px auto;padding:0 20px">
+<h2 style="color:#F5A524">{title}</h2><ol>{items}</ol>
+<p style="color:#9AA4B5">After fixing, stop the bridge (Ctrl+C), start it again with <code>python bridge.py</code>, and reopen this page.</p></body>""", status_code=code)
+
+
+def _fyers_session():
+    """Build a Fyers SessionModel, or return an HTML page explaining exactly what is missing."""
+    try:
+        from fyers_apiv3 import fyersModel
+    except ImportError:
+        return None, _setup_page("Fyers library not installed", [
+            "In the bridge terminal (inside the <code>.venv</code>) run: <code>pip install fyers-apiv3</code>"], 500)
+    cid, sec = (cfg("fyers.client_id") or "").strip(), (cfg("fyers.secret_key") or "").strip()
+    red = cfg("fyers.redirect_uri", "http://127.0.0.1:8765/callback/fyers")
+    missing = [k for k, v in (("client_id", cid), ("secret_key", sec)) if not v]
+    if missing:
+        return None, _setup_page("Fyers keys missing in bridge/config.json", [
+            "Log in to the <b>Fyers API dashboard</b> (myapi.fyers.in) → your app. Copy the <b>App ID</b> (looks like <code>XXXXXXXX-100</code>) and the <b>Secret ID</b>.",
+            f"In <code>bridge/config.json</code> fill <code>\"fyers\": {{\"client_id\": \"XXXXXXXX-100\", \"secret_key\": \"…\", \"redirect_uri\": \"{red}\"}}</code> and set <code>\"broker\": \"fyers\"</code>.",
+            f"In the Fyers app settings the <b>Redirect URL</b> must be exactly <code>{red}</code>.",
+            "Missing now: <b>" + ", ".join(missing) + "</b>"])
+    sess = fyersModel.SessionModel(client_id=cid, secret_key=sec, redirect_uri=red, response_type="code", grant_type="authorization_code")
+    return sess, None
+
+
 @app.get("/login/fyers")
 def login_fyers():
-    from fyers_apiv3 import fyersModel
-    sess = fyersModel.SessionModel(client_id=cfg("fyers.client_id"), secret_key=cfg("fyers.secret_key"), redirect_uri=cfg("fyers.redirect_uri", "http://127.0.0.1:8765/callback/fyers"), response_type="code", grant_type="authorization_code")
-    return RedirectResponse(sess.generate_authcode())
+    sess, err = _fyers_session()
+    if err:
+        return err
+    try:
+        return RedirectResponse(sess.generate_authcode())
+    except Exception as e:  # noqa: BLE001
+        log.exception("Fyers login URL failed")
+        return _setup_page("Fyers login could not start", [f"Fyers said: <code>{e}</code>", "Check the App ID and Secret ID in <code>bridge/config.json</code>."], 500)
 
 
 @app.get("/callback/fyers")
-def callback_fyers(auth_code: str):
-    from fyers_apiv3 import fyersModel
-    sess = fyersModel.SessionModel(client_id=cfg("fyers.client_id"), secret_key=cfg("fyers.secret_key"), redirect_uri=cfg("fyers.redirect_uri", "http://127.0.0.1:8765/callback/fyers"), response_type="code", grant_type="authorization_code")
+def callback_fyers(auth_code: str | None = None, s: str | None = None, message: str | None = None):
+    if not auth_code:
+        return _setup_page("Fyers did not return a login code", [
+            f"Fyers said: <code>{message or s or 'no auth_code in the redirect'}</code>",
+            "Make sure the Redirect URL in your Fyers app equals <code>redirect_uri</code> in config.json, then open <code>/login/fyers</code> again."])
+    sess, err = _fyers_session()
+    if err:
+        return err
     sess.set_token(auth_code)
-    r = sess.generate_token()
-    if "access_token" not in r:
-        raise HTTPException(400, str(r))
+    try:
+        r = sess.generate_token()
+    except Exception as e:  # noqa: BLE001
+        log.exception("Fyers token exchange failed")
+        return _setup_page("Fyers login failed", [f"Fyers said: <code>{e}</code>", "Usually a wrong Secret ID, or the login code expired — open <code>/login/fyers</code> again."], 500)
+    if not isinstance(r, dict) or "access_token" not in r:
+        return _setup_page("Fyers refused the login", [f"Fyers said: <code>{r}</code>", "Check the Secret ID and the Redirect URL, then open <code>/login/fyers</code> again."])
     save_token("fyers", r["access_token"])
     _restart_live_if("fyers")
-    return JSONResponse({"status": "Fyers session saved for today. You can close this tab."})
+    return HTMLResponse("""<!doctype html><meta charset=utf-8><body style="font:16px system-ui;background:#0B0F17;color:#E6EAF2;text-align:center;padding-top:15vh">
+<h2 style="color:#34D399">Fyers session saved for today ✓</h2><p>Go back to DalalQuant and press <b>Retry</b> (or Connect). You can close this tab.</p></body>""")
 
 
 if __name__ == "__main__":
