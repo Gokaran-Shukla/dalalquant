@@ -115,30 +115,39 @@ addTab('home', '⌂', 'My Dashboard', 'markets', renderHome);
 { const i = TABS.findIndex(t => t[0] === 'home'); const [h] = TABS.splice(i, 1); TABS.unshift(h) }
 
 /* ---------- compare 2–4 stocks ---------- */
-const CMP_COL = ['#F5A524', '#4F8CFF', '#34D399', '#A78BFA'];
+const CMP_COL = ['#F5A524', '#4F8CFF', '#E879F9', '#22D3EE'];
 S.cmp = { syms: LS.get('dq_cmp', null), per: 252 };
 function cmpDefault() { return S.uni.filter(s => s.mkt === 'IN' && S.M[s.sym] && S.M[s.sym].mcap).sort((a, b) => S.M[b.sym].mcap - S.M[a.sym].mcap).slice(0, 3).map(s => s.sym) }
-const CMP_ROWS = [
-  ['Sector', m => esc(S.bySym[m.sym].sector), null], ['Price', m => fN(m.price), null], ['Today', m => fP(m.chgp, 2), m => m.chgp, 1],
-  ['3 months', m => fP(m.r3m), m => m.r3m, 1], ['1 year', m => fP(m.r1y), m => m.r1y, 1], ['Max drawdown', m => fPt(m.mdd), m => m.mdd, 1],
-  ['Market cap (₹ Cr)', m => m.mcap ? fN(m.mcap / 1e7, 0) : '—', m => m.mcap, 1], ['P/E', m => m.pe ? fN(m.pe, 1) : '—', m => m.pe > 0 ? m.pe : null, -1],
-  ['P/B', m => m.pb ? fN(m.pb, 1) : '—', m => m.pb, -1], ['ROE', m => fPp(m.roe), m => m.roe, 1], ['ROCE', m => fPp(m.roce), m => m.roce, 1],
-  ['Debt / equity', m => m.de != null ? fN(m.de, 2) : '—', m => m.de, -1], ['Revenue growth 1Y', m => fPp(m.rev1y), m => m.rev1y, 1], ['Profit growth 1Y', m => fPp(m.np1y), m => m.np1y, 1],
-  ['Upside to fair value', m => fPt(m.ups), m => m.ups, 1], ['RSI 14', m => m.rsi != null ? fN(m.rsi, 0) : '—', null], ['DQ score', m => sbar(m.score), m => m.score, 1], ['Signal', m => vpill(m.verdict), null]];
+const num = v => v == null || !isFinite(v) ? null : v;
+/* [label, display, value for ranking, +1 higher is better / -1 lower is better] grouped like a research note */
+const CMP_GROUPS = [
+  ['Performance', [['Today', m => fPt(m.chgp, 2), m => m.chgp, 1], ['3 months', m => fPt(m.r3m), m => m.r3m, 1], ['1 year', m => fPt(m.r1y), m => m.r1y, 1], ['Max drawdown', m => fPt(m.mdd), m => m.mdd, 1]]],
+  ['Valuation', [['Market cap (₹ Cr)', m => m.mcap ? fN(m.mcap, 0) : '—', m => m.mcap, 1], ['P/E', m => m.pe > 0 ? fN(m.pe, 1) : '—', m => m.pe > 0 ? m.pe : null, -1], ['P/B', m => m.pb ? fN(m.pb, 1) : '—', m => m.pb > 0 ? m.pb : null, -1], ['Upside to fair value', m => fPt(m.ups), m => m.ups, 1]]],
+  ['Quality', [['ROE', m => fPp(m.roe), m => m.roe, 1], ['ROCE', m => fPp(m.roce), m => m.roce, 1], ['Debt / equity', m => m.de != null ? fN(m.de, 2) : '—', m => m.de, -1]]],
+  ['Growth', [['Revenue growth 1Y', m => fPp(m.rev1y), m => m.rev1y, 1], ['Profit growth 1Y', m => fPp(m.np1y), m => m.np1y, 1]]],
+  ['Signals', [['RSI 14', m => m.rsi != null ? fN(m.rsi, 0) : '—', null, 0], ['DQ score', m => m.score != null ? fN(m.score, 0) + '<small>/100</small>' : '—', m => m.score, 1], ['Signal', m => vpill(m.verdict), null, 0]]]];
+const STAR = '<svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 9.2l7.1-.6z"/></svg>';
+const CROWN = '<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M3 7l4.5 4L12 4l4.5 7L21 7l-2 12H5z"/></svg>';
 function renderCompare() {
   const el = $('#tab-compare'); const C = S.cmp; if (!C.syms || !C.syms.filter(s => S.M[s]).length) C.syms = cmpDefault();
-  const syms = C.syms.filter(s => S.M[s]).slice(0, 4); const ms = syms.map(s => S.M[s]);
+  const syms = C.syms.filter(s => S.M[s]).slice(0, 4); const ms = syms.map(s => S.M[s]); const k = ms.length;
   const n = Math.min(C.per, ...syms.map(s => S.D[s].bars.length));
-  const series = syms.map((s, i) => { const b = S.D[s].bars.slice(-n); const b0 = b[0].c; return { data: b.map(x => x.c / b0 * 100), color: CMP_COL[i], label: s, w: 2 } });
-  const rows = CMP_ROWS.map(([lab, f, val, dir]) => { let best = -1; if (val && ms.length > 1) { const vs = ms.map(m => { const v = val(m); return v == null || !isFinite(v) ? null : v }); const ok = vs.filter(v => v != null); if (ok.length > 1) { const t = dir > 0 ? Math.max(...ok) : Math.min(...ok); best = vs.indexOf(t) } }
-    return `<tr><th scope="row">${lab}</th>${ms.map((m, i) => `<td class="n${i === best ? ' best' : ''}">${f(m)}</td>`).join('')}</tr>` }).join('');
+  const series = syms.map((s, i) => { const b = S.D[s].bars.slice(-n); const b0 = b[0].c; return { data: b.map(x => x.c / b0 * 100), color: CMP_COL[i], label: s, w: 2.2 } });
   const ret = series.map(s => s.data.at(-1) / 100 - 1);
-  el.innerHTML = `<div class="phead"><div><h1>Compare stocks</h1><p class="sub">Up to four stocks side by side. The best value in each row is highlighted.</p></div></div>
+  const wins = new Array(k).fill(0); let measured = 0;
+  const body = CMP_GROUPS.map(([g, rows]) => `<tr class="cgh"><th colspan="${k + 1}" scope="rowgroup">${g}</th></tr>` + rows.map(([lab, f, val, dir]) => {
+    let best = -1, sc = null;
+    if (val && k > 1) { const vs = ms.map(m => num(val(m))); const ok = vs.filter(v => v != null); if (ok.length > 1) { const hi = Math.max(...ok), lo = Math.min(...ok), t = dir > 0 ? hi : lo; best = vs.indexOf(t); if (hi !== lo) { measured++; wins[best]++ } else best = -1; sc = vs.map(v => v == null ? null : hi === lo ? 1 : (dir > 0 ? (v - lo) : (hi - v)) / (hi - lo)) } }
+    return `<tr><th scope="row">${lab}</th>${ms.map((m, i) => `<td class="${i === best ? 'best' : ''}" style="--c:${CMP_COL[i]}"><div class="cv">${i === best ? `<span class="bst" title="Best of ${k}">${STAR}</span>` : ''}<span class="n">${f(m)}</span></div>${sc && sc[i] != null ? `<div class="cbar" aria-hidden="true"><i style="width:${Math.max(6, sc[i] * 100).toFixed(0)}%"></i></div>` : ''}</td>`).join('')}</tr>` }).join('')).join('');
+  const lead = wins.indexOf(Math.max(...wins));
+  const head = ms.map((m, i) => `<th scope="col" class="chd" style="--c:${CMP_COL[i]}">${i === lead && k > 1 ? `<span class="lead">${CROWN} Leader</span>` : ''}<button type="button" class="symchip" data-open="${esc(syms[i])}" title="Open ${esc(S.bySym[syms[i]].name)}">${esc(syms[i])}</button><div class="cname">${esc(S.bySym[syms[i]].name)}</div><div class="cpx n">₹${fN(m.price)} <span class="${m.chgp >= 0 ? 'up' : 'dn'}">${fPt(m.chgp, 2)}</span></div><div class="csec">${esc(S.bySym[syms[i]].sector)} · ${vpill(m.verdict)}</div><div class="cwins"><b>${wins[i]}</b> / ${measured} best</div></th>`).join('');
+  el.innerHTML = `<div class="phead"><div><h1>Compare stocks</h1><p class="sub">Up to four stocks side by side. A star marks the best value in each row; the bars show where each stock sits from worst to best.</p></div></div>
   <div class="card"><div class="row cmpin">${[0, 1, 2, 3].map(i => `<label class="f"><span><i class="cdot" style="background:${CMP_COL[i]}"></i>Stock ${i + 1}</span><input list="symlist" class="w120" data-cmp="${i}" value="${esc(C.syms[i] || '')}" placeholder="${i < 2 ? 'Symbol' : 'Optional'}"></label>`).join('')}
   <div class="seg" role="group" aria-label="Period">${[[63, '3M'], [126, '6M'], [252, '1Y'], [504, '2Y'], [99999, 'Max']].map(([v, l]) => `<button type="button" class="btn xs ${C.per === v ? 'on' : 's'}" data-cmpper="${v}" aria-pressed="${C.per === v}">${l}</button>`).join('')}</div></div></div>
-  <div class="stiles">${syms.map((s, i) => `<div class="stile" style="border-top:3px solid ${CMP_COL[i]}"><div class="k">${esc(s)} · ${esc(S.bySym[s].name)}</div><div class="v ${ret[i] >= 0 ? 'up' : 'dn'}">${fPt(ret[i])}</div><div class="s">over the period · ${vpill(S.M[s].verdict)}</div></div>`).join('')}</div>
+  ${k > 1 ? `<div class="cverdict" style="--c:${CMP_COL[lead]}">${CROWN}<div><b>${esc(syms[lead])}</b> leads on <b>${wins[lead]} of ${measured}</b> measures${ret[lead] != null ? ` and returned <b class="${ret[lead] >= 0 ? 'up' : 'dn'}">${fPt(ret[lead])}</b> over the period` : ''}.<span class="mu"> Based on the data shown — not investment advice.</span></div></div>` : ''}
+  <div class="stiles">${syms.map((s, i) => `<div class="stile cmpcard" style="--c:${CMP_COL[i]}"><div class="cmphd"><span class="symchip">${esc(s)}</span><span class="cname">${esc(S.bySym[s].name)}</span></div><div class="v ${ret[i] >= 0 ? 'up' : 'dn'}">${fPt(ret[i])}</div><div class="s">over the period</div></div>`).join('')}</div>
   <div class="card"><h3>Relative performance <span class="r mu">Indexed to 100 at the start</span></h3><canvas class="chart" id="cmpCh" style="height:360px"></canvas></div>
-  <div class="card"><h3>Side by side</h3><div class="tw"><table class="t cmpt"><thead><tr><th></th>${syms.map((s, i) => `<th class="n"><span class="cdot" style="background:${CMP_COL[i]}"></span><button type="button" class="lnk" data-open="${esc(s)}">${esc(s)}</button></th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  <div class="card cmpwrap"><h3>Side by side</h3><div class="tw"><table class="t cmpt" style="--k:${k}"><thead><tr><th class="corner"></th>${head}</tr></thead><tbody>${body}</tbody></table></div></div>`;
   const lab = (S.dates || []).length >= n ? S.dates.slice(-n).map(d => String(d).slice(0, 10)) : null;
   lineChart($('#cmpCh'), series, { labels: lab, yfmt: v => fN(v, 0) });
 }
