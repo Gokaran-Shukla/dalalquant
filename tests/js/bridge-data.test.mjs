@@ -53,13 +53,25 @@ test('connected but broker returns no data: clear status + fix-it help with logi
 test('Retry after login: verifies, loads real history for NIFTY 50 + watchlist, starts live quotes', async () => {
   mode = 'ok'; calls = [];
   d.querySelector('#modal [data-act2="retryData"]').click();
-  for (let i = 0; i < 100 && ev('!S.liveMode'); i++) await tick(10);
+  for (let i = 0; i < 300 && ev('!S.bridge.histPri'); i++) await tick(10);
   assert.equal(ev('S.bridge.data'), 'ok');
   assert.equal(ev('S.liveMode'), true);
   const n50 = ev("(S.IDX['NIFTY 50']||{members:[]}).members.length");
   assert.ok(calls.filter(c => c.startsWith('/history')).length >= n50);
   const sym = ev("S.IDX['NIFTY 50'].members[0]");
   assert.equal(ev(`S.D['${sym}'].src.px`), 'live');
-  assert.match(d.querySelector('#tab-algo .dstat').textContent, /Real data on.*fyers.*history \d+\/\d+ loaded/);
+  assert.match(d.querySelector('#tab-algo .dstat').textContent, /Real data on.*fyers.*live quotes/);
+  const other = ev("S.uni.find(s=>!S.IDX['NIFTY 50'].members.includes(s.sym)&&s.mkt==='IN').sym");
+  assert.ok(['quote', 'live'].includes(ev(`S.D['${other}'].src.px`)), 'non-NIFTY stocks get real quotes at once');
   assert.match(d.querySelector('#modeBadge').textContent, /LIVE/);
+});
+
+test('a real quote re-anchors simulated history so the day change is right', () => {
+  const sym = ev("S.uni.find(s=>s.mkt==='IN'&&S.D[s.sym].src.px==='sim'&&!S.D[s.sym].bars.at(-1).t.startsWith(new Date().toISOString().slice(0,10))) ?.sym") ;
+  if (!sym) return; // every stock already real
+  ev(`applyQuotes({'${sym}':{ltp:110,prev_close:100,open:101,high:111,low:99,volume:5}})`);
+  const b = JSON.parse(ev(`JSON.stringify(S.D['${sym}'].bars.slice(-2))`));
+  assert.ok(Math.abs(b[0].c - 100) < 1e-6, 'previous close = real prev close');
+  assert.equal(b[1].c, 110);
+  assert.equal(ev(`S.D['${sym}'].src.px`), 'quote');
 });
