@@ -525,7 +525,7 @@ def vol_scan(years: float = 2, min_turnover_cr: float = 1.0) -> dict:
         rows = sorted(rows, key=lambda r: r["t"])[-n:]
         if len(rows) < 60:
             continue
-        rets, rng, d5, d10, mx, mn, last10 = [], [], 0, 0, 0.0, 0.0, None
+        rets, rng, d5, d6, d8, d10, mx, mn, last10 = [], [], 0, 0, 0, 0, 0.0, 0.0, None
         for r in rows:
             pc = r.get("pc") or 0
             if pc <= 0 or r["c"] <= 0:
@@ -538,6 +538,8 @@ def vol_scan(years: float = 2, min_turnover_cr: float = 1.0) -> dict:
             rets.append(ret)
             rng.append((hi - lo) / pc)
             d5 += sw >= 0.05
+            d6 += sw >= 0.06
+            d8 += sw >= 0.08
             if sw >= 0.10:
                 d10 += 1
                 last10 = r["t"]
@@ -551,7 +553,7 @@ def vol_scan(years: float = 2, min_turnover_cr: float = 1.0) -> dict:
         sd = (sum((x - m) ** 2 for x in rets) / max(1, len(rets) - 1)) ** 0.5
         yrs = len(rets) / 248
         out.append({"sym": sym, "name": names.get(sym, sym), "price": rows[-1]["c"], "last": rows[-1]["t"], "n": len(rets),
-                    "vol": sd * 248 ** 0.5, "adr": sum(rng) / len(rng), "f5": d5 / yrs, "f10": d10 / yrs, "d5": d5, "d10": d10,
+                    "vol": sd * 248 ** 0.5, "adr": sum(rng) / len(rng), "f5": d5 / yrs, "f10": d10 / yrs, "d5": d5, "d6": d6, "d8": d8, "d10": d10, "yrs": yrs,
                     "maxU": mx, "maxD": mn, "last10": last10, "turnover_cr": turn})
     return {"rows": out, "cached_days": len(list((CACHE / "eq").glob("*.json"))), "sample_days": days}
 

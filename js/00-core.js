@@ -325,6 +325,9 @@ JKCEMENT|JK Cement|Cement|M
 DALBHARAT|Dalmia Bharat|Cement|M
 RAMCOCEM|Ramco Cements|Cement|X
 ACC|ACC|Cement|M
+NSDL|National Securities Depository|Financials|X
+HDBFS|HDB Financial Services|Financials|M
+ATHERENERG|Ather Energy|Auto|X
 AAPL|Apple|US Tech|UQ
 MSFT|Microsoft|US Tech|UQ
 NVDA|NVIDIA|US Tech|UQ
