@@ -45,7 +45,7 @@ async function vlBackfill(syms) { let i = 0, ok = 0; const bar = document.create
 async function vlDialog(reload) {
   if (reload || !VL_CACHE || VL_CACHE.src !== VL.src || VL_CACHE.years !== VL.years) {
     modal(`<div class="h3" style="font-size:18px">⚡ High-volatility watchlists</div><div class="vlBusy">${VL.src === 'nse' ? 'Scanning every NSE-listed stock from NSE end-of-day data…' : 'Scanning the stocks in this terminal…'}</div>`);
-    try { await vlLoad() } catch (e) { VL_CACHE = { err: /409/.test(e.message) ? e.message.replace(/^.*?:\s*/, '') : e.message, src: VL.src, years: VL.years, rows: [] } } }
+    try { await vlLoad() } catch (e) { const msg = String(e.message || e).replace(/^[^:]*?\d{3}[^:]*:\s*/, '').replace(/^\{?"?detail"?:\s*/, '').replace(/["{}]/g, '').trim(); VL_CACHE = { err: msg, needSync: /cache has only|NSE sync/i.test(msg), src: VL.src, years: VL.years, rows: [] } } }
   const C = VL_CACHE, pick = vlQualify(C.rows), by = c => pick.filter(r => r.cat === c);
   const simN = C.src === 'term' ? C.rows.filter(r => r.sim).length : 0;
   modal(`<div class="h3" style="font-size:18px">⚡ High-volatility watchlists <span class="r mu" style="font-size:12.5px;font-weight:500">${C.src === 'nse' ? `whole NSE · ${fN(C.rows.length, 0)} liquid stocks scanned${C.amfi ? ` · market caps: AMFI ${esc(C.amfi)}` : ''}` : `${C.rows.length} terminal stocks scanned`}</span></div>
@@ -53,7 +53,7 @@ async function vlDialog(reload) {
     <label class="f">History<select id="vlYrs">${[[1, '1 year'], [2, '2 years'], [3, '3 years']].map(([v, l]) => `<option ${v === VL.years ? 'selected' : ''} value="${v}">${l}</option>`).join('')}</select></label>
     <label class="f">Volatility level<select id="vlLvl">${Object.entries(VL_LEVELS).map(([k, [l, v, f]]) => `<option value="${k}" ${k === VL.level ? 'selected' : ''}>${l} — vol ≥${v * 100}% or ≥${f} days of 10% moves a year</option>`).join('')}</select></label>
     <label class="f">Worth trading: avg daily value ≥<select id="vlTurn">${[1, 2, 5, 10, 25, 50].map(v => `<option ${v === VL.minTurn ? 'selected' : ''} value="${v}">₹${v} Cr</option>`).join('')}</select></label></div>
-   ${C.err ? `<div class="vlWarn">${esc(C.err)}</div>` : ''}
+   ${C.needSync ? `<div class="vlSync"><div><b>One-time setup: download NSE's daily price files</b></div><div class="mu">The whole-NSE scan reads NSE's official end-of-day files, which the bridge downloads once and keeps on your computer (≈2 years of files, about 10–20 minutes; newest days first, so the scan unlocks after the first year). Leave the bridge running.</div><div class="row" style="margin-top:8px"><button class="btn g" id="vlSyncGo">⬇ Download NSE data now</button><button class="btn s" id="vlUseTerm">Scan terminal stocks instead</button></div><div class="labBar" style="margin:10px 0 4px"><i id="vlSyncBar" style="width:0%"></i></div><div class="mu" id="vlSyncT"></div></div>` : C.err ? `<div class="vlWarn">${esc(C.err)}</div>` : ''}
    ${simN > C.rows.length * 0.2 ? `<div class="vlWarn">${simN} of ${C.rows.length} stocks still use <b>simulated</b> prices, so they are not ranked on real moves. ${S.bridge.ok ? '<button class="btn xs g" id="vlLoadH">Load real history now</button>' : 'Connect the bridge and click <b>Load live history</b>.'}</div>` : ''}
    ${C.src === 'nse' && !C.err && !C.amfi ? `<div class="vlWarn">AMFI's market-cap list could not be downloaded, so Large / Mid / Small use estimates. Download “Average Market Capitalisation” (.xlsx) from amfiindia.com and put it in <span class="mono">bridge/cache/</span>, then re-scan.</div>` : ''}
    <div class="vlCols">${['Large', 'Mid', 'Small'].map(c => `<div class="vlCol"><div class="vlCap" style="color:${VL_COL[c]}">${c} caps <b>${by(c).length}</b></div>
@@ -64,9 +64,23 @@ async function vlDialog(reload) {
   const set = () => { VL.src = $('#vlSrc').value; VL.years = +$('#vlYrs').value; VL.level = $('#vlLvl').value; VL.minTurn = +$('#vlTurn').value; LS.set('dq_vl3', VL); vlDialog() };
   ['#vlSrc', '#vlYrs', '#vlLvl', '#vlTurn'].forEach(s => $(s).onchange = set); $('#vlRe').onclick = () => vlDialog(true);
   $('#vlGo').onclick = async () => { $('#vlGo').disabled = true; const r = await vlApply(pick); closeModal(); toast(`High-volatility lists ready — Large ${r.made.Large} · Mid ${r.made.Mid} · Small ${r.made.Small}${r.added ? ` · ${r.added} stocks added to the terminal` : ''}`, 7000); const L = WL.lists.find(l => l.auto === 'vol-Large'); if (L) wlUse(L.id); go('lists') };
+  const ut = $('#vlUseTerm'); if (ut) ut.onclick = () => { VL.src = 'term'; LS.set('dq_vl3', VL); vlDialog(true) };
+  const sg = $('#vlSyncGo'); if (sg) sg.onclick = () => vlSyncNse(sg);
   const lh = $('#vlLoadH'); if (lh) lh.onclick = async () => { lh.disabled = true; lh.textContent = 'Loading real history… (a few minutes)'; await loadLiveHistory('ALL'); vlDialog(true) } }
 // entry point in My Radar's sidebar
 (function () { const _r = renderLists; renderLists = function () { _r(); const side = $('#tab-lists .wlSide'); if (!side || $('#vlBtn')) return; const d = document.createElement('div'); d.className = 'vlBox';
   const auto = WL.lists.filter(l => /^vol-/.test(l.auto || ''));
   d.innerHTML = `<div class="h3" style="margin-top:14px">Smart lists</div><button class="btn g vlBtn" id="vlBtn">⚡ Build high-volatility lists</button><div class="note">Scans the whole NSE for stocks that move hard, files every one into Large / Mid / Small cap lists by market cap, with an entry / exit call for each.${auto.length && auto[0].updated ? ` Last built ${new Date(auto[0].updated).toLocaleDateString('en-IN')}.` : ''}</div>`;
   side.appendChild(d); $('#vlBtn').onclick = () => vlDialog() }; RENDERERS.lists = renderLists })();
+
+// one-click NSE end-of-day download from inside the dialog, with progress; re-scans automatically once a year of data is in
+async function vlSyncNse(btn) { btn.disabled = true; btn.textContent = 'Downloading…';
+  try { await bridgeFetch('/nse/sync?days=520&fo_days=60', { method: 'POST' }) } catch (e) { $('#vlSyncT').innerHTML = `<span class="dn">Could not start: ${esc(e.message)}</span>`; btn.disabled = false; btn.textContent = '⬇ Retry'; return }
+  const tick = async () => { let st; try { st = await bridgeFetch('/nse/status') } catch (e) { setTimeout(tick, 4000); return }
+    const bar = $('#vlSyncBar'), t = $('#vlSyncT'); if (!bar) return;   // dialog closed: the download continues on the bridge
+    const pct = st.total ? Math.min(100, st.done / st.total * 100) : 0; bar.style.width = pct.toFixed(1) + '%';
+    t.innerHTML = `${st.eq_days_cached} trading days downloaded${st.errors ? ` · <span class="dn">${st.errors} days failed</span>` : ''}${st.syncing ? ' · still downloading…' : ' · done'}`;
+    if (st.errors > 40 && st.eq_days_cached < 20) { t.innerHTML += '<br><span class="dn">NSE is refusing the downloads from this network. Try again later, or use “Scan terminal stocks instead”.</span>'; btn.disabled = false; btn.textContent = '⬇ Retry'; return }
+    if (st.eq_days_cached >= 260 || (!st.syncing && st.eq_days_cached >= 120)) { t.innerHTML += ' — scanning now'; vlDialog(true); return }
+    setTimeout(tick, 3000) };
+  tick() }
