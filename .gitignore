@@ -8,3 +8,4 @@ bridge/cache/
 node_modules/
 deploy/config.json
 bridge/sync_state.json
+bridge/symbols_extra.json

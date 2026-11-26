@@ -109,16 +109,26 @@ US_SYMBOLS = set(cfg("us_symbols", [
     "CSCO", "TMO", "MCD", "INTC", "QCOM", "GS", "CAT", "IBM", "PLTR"]))
 
 
+EXTRA_FILE = Path(__file__).with_name("symbols_extra.json")
+try:
+    EXTRA_SYMS: dict[str, dict] = json.loads(EXTRA_FILE.read_text()) if EXTRA_FILE.exists() else {}
+except Exception:  # noqa: BLE001
+    EXTRA_SYMS = {}
+
+
 def yahoo_symbol(sym: str) -> str:
     if sym in INDEX_ALIASES:
         return INDEX_ALIASES[sym]["yahoo"]
+    if sym in EXTRA_SYMS:
+        return EXTRA_SYMS[sym]["yahoo"]
     if sym in US_SYMBOLS:
         return sym.replace(".", "-")
     return sym + ".NS"
 
 
 def is_us(sym: str) -> bool:
-    return sym in US_SYMBOLS
+    """True for anything served by Yahoo rather than the Indian broker (US stocks, BSE-only, crypto, foreign)."""
+    return sym in US_SYMBOLS or sym in EXTRA_SYMS
 
 
 # --------------------------------------------------------------------------- maths
@@ -1201,6 +1211,90 @@ def _json(url, timeout=30):
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 DalalQuant"})
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return json.loads(r.read())
+
+
+# ---- symbol search (TradingView-style): full NSE list + ETFs + Yahoo for BSE/US/global/crypto --------------
+_TYPE_MAP = {"EQUITY": "stock", "ETF": "etf", "INDEX": "index", "CRYPTOCURRENCY": "crypto", "FUTURE": "futures",
+             "MUTUALFUND": "fund", "CURRENCY": "forex"}
+
+
+def _rank(q: str, sym: str, name: str) -> int:
+    q, sym, name = q.upper(), sym.upper(), name.upper()
+    if sym == q:
+        return 0
+    if sym.startswith(q):
+        return 1
+    if name.startswith(q):
+        return 2
+    if any(w.startswith(q) for w in name.split()):
+        return 3
+    if q in sym:
+        return 4
+    if q in name:
+        return 5
+    return 99
+
+
+@app.get("/symbols/search", dependencies=[Depends(auth)])
+def symbols_search(q: str, kind: str = "all", limit: int = 40):
+    q = q.strip()
+    if not q:
+        return {"rows": []}
+    import nse_data
+    rows: list[dict] = []
+    if kind in ("all", "stock", "etf"):
+        for r in nse_data.equity_list():
+            if kind != "all" and r["type"] != kind:
+                continue
+            k = _rank(q, r["sym"], r["name"])
+            if k < 99:
+                rows.append(dict(r, rank=k))
+    if kind in ("all", "index"):
+        for k_, v in INDEX_ALIASES.items():
+            k = _rank(q, k_, k_)
+            if k < 99:
+                rows.append({"sym": k_, "name": k_, "exch": "NSE" if "SENSEX" not in k_ else "BSE", "type": "index", "rank": k})
+    have = {r["sym"] for r in rows}
+    if kind in ("all", "stock", "etf", "crypto", "futures", "forex", "fund", "index", "global"):
+        try:
+            y = _json("https://query2.finance.yahoo.com/v1/finance/search?" + urllib.parse.urlencode(
+                {"q": q, "quotesCount": 20, "newsCount": 0, "listsCount": 0}), timeout=10)
+            for it in y.get("quotes", []):
+                ys = it.get("symbol") or ""
+                t = _TYPE_MAP.get(it.get("quoteType", ""), "other")
+                if kind not in ("all", "global") and t != kind:
+                    continue
+                exch = it.get("exchDisp") or it.get("exchange") or ""
+                base = ys[:-3] if ys.endswith((".NS", ".BO")) else ys
+                if ys.endswith(".NS") and base in have:
+                    continue  # already in the NSE list
+                if ys.endswith(".BO") and ((it.get("shortname") or "").upper().replace(" ", "") in have or base in have):
+                    continue  # BSE twin of an NSE stock
+                if ys.endswith(".NS"):
+                    sym, route = base, "broker"
+                else:
+                    sym, route = (base if ys.endswith(".BO") and base not in have else ys.replace("^", "")), "yahoo"
+                rows.append({"sym": sym, "name": it.get("longname") or it.get("shortname") or ys, "exch": exch, "type": t,
+                             "yahoo": ys, "route": route, "sector": it.get("sectorDisp") or it.get("sector") or "",
+                             "industry": it.get("industryDisp") or it.get("industry") or "", "rank": 6 + _rank(q, base, it.get("shortname") or "") / 100})
+                have.add(sym)
+        except Exception as e:  # noqa: BLE001
+            log.info("yahoo search failed: %s", e)
+    rows.sort(key=lambda r: (r["rank"], len(r["sym"])))
+    return {"rows": rows[:limit], "nse_list": len(nse_data.equity_list())}
+
+
+class SymReg(BaseModel):
+    sym: str
+    yahoo: str
+
+
+@app.post("/symbols/register", dependencies=[Depends(auth)])
+def symbols_register(r: SymReg):
+    """Remember that a symbol is served by Yahoo (BSE-only, US, crypto, foreign) so quotes and history route there."""
+    EXTRA_SYMS[r.sym] = {"yahoo": r.yahoo}
+    EXTRA_FILE.write_text(json.dumps(EXTRA_SYMS, indent=1))
+    return {"ok": True, "sym": r.sym, "yahoo": r.yahoo}
 
 
 @app.get("/mf/search", dependencies=[Depends(auth)])

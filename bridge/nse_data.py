@@ -457,3 +457,44 @@ def fno_ban() -> dict:
         if parts:
             syms.append(parts[-1])
     return {"date": head, "symbols": syms}
+
+
+# ---- master list of NSE equities and ETFs (for symbol search) -------------------------------------
+_EQL: dict[str, Any] = {"t": 0, "rows": []}
+
+
+def equity_list() -> list[dict]:
+    """All NSE-listed equities (EQUITY_L.csv) and ETFs, cached for a week on disk."""
+    import csv
+    import io
+    if _EQL["rows"] and time.time() - _EQL["t"] < 86400:
+        return _EQL["rows"]
+    f = CACHE / "json" / "equity_list.json"
+    if f.exists() and time.time() - f.stat().st_mtime < 7 * 86400:
+        try:
+            _EQL.update(t=time.time(), rows=json.loads(f.read_text()))
+            return _EQL["rows"]
+        except Exception:  # noqa: BLE001
+            pass
+    rows: list[dict] = []
+    b = _get("https://nsearchives.nseindia.com/content/equities/EQUITY_L.csv") or _get("https://archives.nseindia.com/content/equities/EQUITY_L.csv")
+    if b:
+        for r in csv.DictReader(io.StringIO(b.decode("utf-8", "ignore"))):
+            r = {k.strip().upper(): (v or "").strip() for k, v in r.items() if k}
+            if r.get("SYMBOL") and r.get("SERIES") in ("EQ", "BE", "BZ", "SM", "ST", ""):
+                rows.append({"sym": r["SYMBOL"], "name": r.get("NAME OF COMPANY", r["SYMBOL"]).title(), "exch": "NSE", "type": "stock",
+                             "isin": r.get("ISIN NUMBER", ""), "listed": r.get("DATE OF LISTING", "")})
+    e = _get("https://nsearchives.nseindia.com/content/equities/eq_etfseclist.csv")
+    if e:
+        for r in csv.DictReader(io.StringIO(e.decode("utf-8", "ignore"))):
+            r = {k.strip().upper(): (v or "").strip() for k, v in r.items() if k}
+            sym = r.get("SYMBOL")
+            if sym:
+                rows.append({"sym": sym, "name": r.get("SECURITY NAME") or r.get("UNDERLYING") or sym, "exch": "NSE", "type": "etf",
+                             "underlying": r.get("UNDERLYING", "")})
+    if rows:
+        f.write_text(json.dumps(rows))
+        _EQL.update(t=time.time(), rows=rows)
+    elif f.exists():
+        _EQL.update(t=time.time(), rows=json.loads(f.read_text()))
+    return _EQL["rows"]
