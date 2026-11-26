@@ -208,6 +208,123 @@ CROMPTON|Crompton Greaves Consumer|Consumer|X
 BLUESTARCO|Blue Star|Consumer|X
 CENTURYPLY|Century Plyboards|Consumer|X
 KPRMILL|KPR Mill|Consumer|X
+MAZDOCK|Mazagon Dock Shipbuilders|Defence|M
+BDL|Bharat Dynamics|Defence|M
+MIDHANI|Mishra Dhatu Nigam|Defence|X
+IREDA|Indian Renewable Energy Dev Agency|Financials|M
+RVNL|Rail Vikas Nigam|Infra|M
+IRCTC|IRCTC|Services|M
+RAILTEL|RailTel Corporation|Telecom|X
+RITES|RITES|Infra|X
+PAYTM|One 97 Communications (Paytm)|Financials|M
+NYKAA|FSN E-Commerce (Nykaa)|Consumer|M
+POLICYBZR|PB Fintech (PolicyBazaar)|Financials|M
+SWIGGY|Swiggy|Services|M
+OLAELEC|Ola Electric Mobility|Auto|X
+SUZLON|Suzlon Energy|Power|M
+INOXWIND|Inox Wind|Power|X
+WAAREEENER|Waaree Energies|Power|M
+PREMIERENE|Premier Energies|Power|X
+SJVN|SJVN|Power|M
+NLCINDIA|NLC India|Power|X
+TORNTPOWER|Torrent Power|Power|M
+YESBANK|Yes Bank|Banks|M
+IDEA|Vodafone Idea|Telecom|M
+TATACOMM|Tata Communications|Telecom|M
+HFCL|HFCL|Telecom|X
+TEJASNET|Tejas Networks|Telecom|X
+ITI|ITI|Telecom|X
+BSE|BSE Ltd|Financials|M
+MCX|Multi Commodity Exchange|Financials|M
+HDFCAMC|HDFC AMC|Financials|M
+NUVAMA|Nuvama Wealth|Financials|X
+ANANDRATHI|Anand Rathi Wealth|Financials|X
+ABCAPITAL|Aditya Birla Capital|Financials|M
+LICHSGFIN|LIC Housing Finance|Financials|M
+BAJAJHFL|Bajaj Housing Finance|Financials|M
+SBICARD|SBI Cards|Financials|M
+M&MFIN|Mahindra & Mahindra Financial|Financials|M
+LTF|L&T Finance|Financials|M
+POONAWALLA|Poonawalla Fincorp|Financials|X
+PIRAMALENT|Piramal Enterprises|Financials|X
+IOB|Indian Overseas Bank|Banks|M
+UCOBANK|UCO Bank|Banks|X
+CENTRALBK|Central Bank of India|Banks|X
+BANDHANBNK|Bandhan Bank|Banks|M
+ICICIPRULI|ICICI Prudential Life|Insurance|M
+MFSL|Max Financial Services|Insurance|M
+STARHEALTH|Star Health Insurance|Insurance|M
+NIACL|New India Assurance|Insurance|X
+GICRE|GIC Re|Insurance|X
+TATACHEM|Tata Chemicals|Chemicals|M
+NAVINFLUOR|Navin Fluorine|Chemicals|X
+AARTIIND|Aarti Industries|Chemicals|X
+ATUL|Atul|Chemicals|X
+UPL|UPL|Chemicals|M
+COROMANDEL|Coromandel International|Chemicals|M
+HINDCOPPER|Hindustan Copper|Metals|M
+NATIONALUM|National Aluminium|Metals|M
+MOIL|MOIL|Metals|X
+APLAPOLLO|APL Apollo Tubes|Metals|M
+JSWINFRA|JSW Infrastructure|Infra|M
+GMRAIRPORT|GMR Airports|Infra|M
+IRB|IRB Infrastructure|Infra|X
+NCC|NCC|Infra|X
+SUPREMEIND|Supreme Industries|CapGoods|M
+KEI|KEI Industries|CapGoods|M
+HONAUT|Honeywell Automation|CapGoods|M
+3MINDIA|3M India|CapGoods|X
+AIAENG|AIA Engineering|CapGoods|M
+THERMAX|Thermax|CapGoods|M
+SCHAEFFLER|Schaeffler India|Auto|M
+TIMKEN|Timken India|CapGoods|X
+GRINDWELL|Grindwell Norton|CapGoods|X
+CARBORUNIV|Carborundum Universal|CapGoods|X
+ABBOTINDIA|Abbott India|Pharma|M
+GLAXO|GlaxoSmithKline Pharma|Pharma|X
+PFIZER|Pfizer|Pharma|X
+BIOCON|Biocon|Pharma|M
+LAURUSLABS|Laurus Labs|Pharma|M
+IPCALAB|IPCA Laboratories|Pharma|M
+MANKIND|Mankind Pharma|Pharma|M
+GLENMARK|Glenmark Pharma|Pharma|M
+FORTIS|Fortis Healthcare|Healthcare|M
+ASTERDM|Aster DM Healthcare|Healthcare|X
+APOLLOTYRE|Apollo Tyres|Auto|M
+BALKRISIND|Balkrishna Industries|Auto|M
+EXIDEIND|Exide Industries|Auto|M
+ESCORTS|Escorts Kubota|Auto|M
+SONACOMS|Sona BLW Precision|Auto|M
+UNOMINDA|Uno Minda|Auto|M
+TIINDIA|Tube Investments|Auto|M
+ZFCVINDIA|ZF Commercial Vehicle|Auto|X
+MARICO|Marico|FMCG|M
+DABUR|Dabur India|FMCG|M
+COLPAL|Colgate-Palmolive India|FMCG|M
+EMAMILTD|Emami|FMCG|X
+JYOTHYLAB|Jyothy Labs|FMCG|X
+PATANJALI|Patanjali Foods|FMCG|M
+JUBLFOOD|Jubilant FoodWorks|Consumer|M
+DEVYANI|Devyani International|Consumer|X
+KALYANKJIL|Kalyan Jewellers|Consumer|M
+TRIDENT|Trident|Consumer|X
+RAYMOND|Raymond|Consumer|X
+PVRINOX|PVR INOX|Services|X
+ZEEL|Zee Entertainment|Services|X
+SUNTV|Sun TV Network|Services|X
+NETWORK18|Network18 Media|Services|X
+GUJGASLTD|Gujarat Gas|Energy|M
+IGL|Indraprastha Gas|Energy|M
+MGL|Mahanagar Gas|Energy|X
+OIL|Oil India|Energy|M
+HINDPETRO|Hindustan Petroleum|Energy|M
+ATGL|Adani Total Gas|Energy|M
+TATATECH|Tata Technologies|IT|M
+LTTS|L&T Technology Services|IT|M
+JKCEMENT|JK Cement|Cement|M
+DALBHARAT|Dalmia Bharat|Cement|M
+RAMCOCEM|Ramco Cements|Cement|X
+ACC|ACC|Cement|M
 AAPL|Apple|US Tech|UQ
 MSFT|Microsoft|US Tech|UQ
 NVDA|NVIDIA|US Tech|UQ
