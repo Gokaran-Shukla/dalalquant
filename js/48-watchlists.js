@@ -22,6 +22,7 @@ function wlMcapReal(sym) { const d = S.D[sym]; return (d && d.src && d.src.f !==
 /* Entry / exit call for one stock: the terminal's verdict + trend, RSI and volatility turned into a plain instruction,
    with a stop 2×ATR away and a position size that risks ~1% of capital at that stop. */
 function dqCall(sym) { const m = S.M[sym], d = S.D[sym]; if (!m || !m.price) return { k: 'na', t: '—', s: '' };
+  if (d && d.src && d.src.px === 'sim') return { k: 'na', t: 'NO REAL DATA', s: 'Demo prices — connect the bridge and load live history to get a call' };
   const atr = m.atr || m.price * 0.03, stop = Math.max(0.01, m.price - 2 * atr), sp = 1 - stop / m.price, size = Math.min(100, 1 / Math.max(sp, 0.005));
   const up = (m.sma50 ? m.price > m.sma50 : true) && (m.stDir == null || m.stDir > 0), above200 = m.sma200 ? m.price > m.sma200 : null;
   const sl = `SL ${fN(stop)} (−${(sp * 100).toFixed(1)}%) · size ≤${size >= 100 ? '100' : size.toFixed(0)}%`;
@@ -32,7 +33,7 @@ function dqCall(sym) { const m = S.M[sym], d = S.D[sym]; if (!m || !m.price) ret
   else if (m.verdict === 'HOLD' && m.rsi != null && m.rsi >= 70) c = { k: 'wait', t: 'WAIT (HOT)', s: `Overbought (RSI ${m.rsi.toFixed(0)}) — let it cool; holders trail SL ${fN(stop)}` };
   else if (m.verdict === 'HOLD') { const dip = Math.max(m.ema20 || 0, m.price - atr); c = { k: 'dip', t: 'BUY ON DIP', s: `Good stock, no fresh signal — accumulate near ${fN(dip)} · holders keep SL ${fN(stop)}` } }
   else c = { k: 'wait', t: 'WAIT', s: `${above200 === false ? 'Below 200-DMA' : 'Momentum weak'} — no entry yet; watch for a close above ${fN(m.sma50 || m.price * 1.05)}` };
-  if (d && d.src && d.src.px === 'sim') c.s = '[simulated data] ' + c.s; return c }
+  return c }
 function dqCallHtml(sym) { const c = dqCall(sym); return `<div class="dqc"><span class="dqf dqf-${c.k}">${c.t}</span><div class="dqs">${esc(c.s)}</div></div>` }
 function wlRows(list) { const rows = list.syms.map((s, i) => ({ s, i, m: S.M[s], u: S.bySym[s] })).filter(x => x.u); const { k, dir } = list.sort || WL.sort;
   const ord = { enter: 0, enter2: 1, dip: 2, wait: 3, exit: 4, na: 5 }; const val = x => k === 'add' ? x.i : k === 'sym' ? x.s : k === 'mcap' ? wlMcap(x.s) : k === 'call' ? ord[dqCall(x.s).k] : x.m ? (k === 'score' ? x.m.score : x.m[k]) : null;
@@ -58,7 +59,7 @@ function renderLists() {
     ${rows.map((r, ix) => { const m = r.m; const mc = wlMcap(r.s); const other = wlMember(r.s).filter(l => l.id !== A.id); return `<tr data-wlrow="${esc(r.s)}" draggable="${sk.k === 'add' ? 'true' : 'false'}"><td class="n mu">${ix + 1}</td><td><span class="wlGrip" title="Drag to reorder">⋮⋮</span><b class="sym cl" data-open="${esc(r.s)}">${esc(r.s)}</b><div class="mu wlSub">${esc((r.u.name || '').slice(0, 28))}${other.length ? ' · ' + other.map(l => `<span class="wlDot sm" style="background:${l.color}" title="Also in ${esc(l.name)}"></span>`).join('') : ''}</div></td>
      <td class="wlCallTd">${dqCallHtml(r.s)}</td><td class="n" title="${WL.meta[r.s] && WL.meta[r.s].cat ? esc(WL.meta[r.s].cat + ' cap · AMFI rank ' + (WL.meta[r.s].rank || '?')) : ''}">${mc ? fCr(mc) + (wlMcapReal(r.s) ? '' : '<span class="mu" title="estimate from simulated data">*</span>') : '—'}</td>
      <td><canvas class="wlSp" data-sp="${esc(r.s)}" data-spark="1" width="90" height="26"></canvas></td>
-     <td class="n">${m ? fN(m.price) : '—'}</td>${['chgp', 'r1w', 'r1m', 'r1y', 'offH'].map(k => `<td class="n ${m && m[k] != null ? (m[k] >= 0 ? 'up' : 'dn') : ''}">${m && m[k] != null ? fP(m[k]) : '—'}</td>`).join('')}<td class="n">${m ? fN(m.score, 0) : '—'}</td><td>${m ? vpill(m.verdict) : ''}</td>
+     <td class="n">${m ? fN(m.price) : '—'}${S.D[r.s] && S.D[r.s].src && S.D[r.s].src.px === 'sim' ? ' <span class="badge b-sim">SIM</span>' : ''}</td>${['chgp', 'r1w', 'r1m', 'r1y', 'offH'].map(k => `<td class="n ${m && m[k] != null ? (m[k] >= 0 ? 'up' : 'dn') : ''}">${m && m[k] != null ? fP(m[k]) : '—'}</td>`).join('')}<td class="n">${m ? fN(m.score, 0) : '—'}</td><td>${m ? vpill(m.verdict) : ''}</td>
      <td><input class="wlNote" data-wlnote="${esc(r.s)}" value="${esc(WL.notes[A.id + ':' + r.s] || '')}" placeholder="target, reason…" maxlength="80"></td>
      <td class="wlAct"><select class="wlMove" data-wlmove="${esc(r.s)}" aria-label="Copy to another list"><option value="">Copy to…</option>${WL.lists.filter(l => l.id !== A.id).map(l => `<option value="${l.id}">${esc(l.name)}</option>`).join('')}<option value="__new">New list…</option></select><button class="btn xs s" data-wlrm="${esc(r.s)}" aria-label="Remove ${esc(r.s)}">✕</button></td></tr>` }).join('')}</tbody></table></div>`
      : `<div class="wlEmpty"><div style="font-size:30px">☆</div><div><b>${esc(A.name)}</b> is empty.</div><div class="mu">Add stocks with <b>⌕ Add symbols</b>, the ☆ star on any stock, or paste a list of symbols.</div><div class="row" style="justify-content:center;margin-top:10px"><button class="btn g" data-wlact="add">⌕ Add symbols</button><button class="btn s" data-wlact="paste">Paste symbols…</button></div></div>`}
