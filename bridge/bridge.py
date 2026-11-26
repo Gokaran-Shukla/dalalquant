@@ -1284,6 +1284,23 @@ def symbols_search(q: str, kind: str = "all", limit: int = 40):
     return {"rows": rows[:limit], "nse_list": len(nse_data.equity_list())}
 
 
+@app.get("/scan/volatility", dependencies=[Depends(auth)])
+def scan_volatility(years: float = 2, min_turnover_cr: float = 1.0):
+    """Every NSE equity's volatility stats from the NSE EOD cache, with AMFI market cap and Large/Mid/Small category."""
+    import nse_data
+    res = nse_data.vol_scan(years, min_turnover_cr)
+    if res["cached_days"] < 120:
+        raise HTTPException(409, f"NSE end-of-day cache has only {res['cached_days']} days. Run the NSE sync first "
+                                 "(Data & Settings → NSE official EOD → Sync NSE files), then scan again.")
+    am = nse_data.amfi_mcap()
+    for r in res["rows"]:
+        a = am["rows"].get(r["sym"])
+        if a:
+            r.update(mcap_cr=a["mcap_cr"], rank=a["rank"], cat=a["cat"])
+    res.update(amfi_period=am.get("period"), amfi_n=len(am["rows"]))
+    return res
+
+
 class SymReg(BaseModel):
     sym: str
     yahoo: str

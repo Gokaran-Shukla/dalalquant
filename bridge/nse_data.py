@@ -498,3 +498,134 @@ def equity_list() -> list[dict]:
     elif f.exists():
         _EQL.update(t=time.time(), rows=json.loads(f.read_text()))
     return _EQL["rows"]
+
+
+# ---- whole-market volatility scan (from the cached NSE EOD bhavcopies) -------------------------------
+_IDX_FILES = {"n": 0}
+
+
+def _refresh_index():
+    n = len(list((CACHE / "eq").glob("*.json")))
+    if n != _IDX_FILES["n"]:
+        with _LOCK:
+            _INDEX.clear()
+        _IDX_FILES["n"] = n
+    _build_index()
+
+
+def vol_scan(years: float = 2, min_turnover_cr: float = 1.0) -> dict:
+    """Volatility statistics for every NSE equity in the EOD cache.
+    Returns use NSE's PREV_CLOSE, which is already adjusted for splits/bonuses, so corporate actions do not show as moves."""
+    _refresh_index()
+    names = {r["sym"]: r["name"] for r in equity_list() if r.get("type") == "stock"}
+    n = int(years * 248)
+    days = len({r["t"] for rows in list(_INDEX.values())[:50] for r in rows})
+    out = []
+    for sym, rows in _INDEX.items():
+        rows = sorted(rows, key=lambda r: r["t"])[-n:]
+        if len(rows) < 60:
+            continue
+        rets, rng, d5, d10, mx, mn, last10 = [], [], 0, 0, 0.0, 0.0, None
+        for r in rows:
+            pc = r.get("pc") or 0
+            if pc <= 0 or r["c"] <= 0:
+                continue
+            ret = r["c"] / pc - 1
+            if abs(ret) > 0.6:      # data glitch / relisting
+                continue
+            hi, lo = r["h"] or r["c"], r["l"] or r["c"]
+            sw = max(abs(ret), hi / pc - 1, 1 - lo / pc)
+            rets.append(ret)
+            rng.append((hi - lo) / pc)
+            d5 += sw >= 0.05
+            if sw >= 0.10:
+                d10 += 1
+                last10 = r["t"]
+            mx, mn = max(mx, ret), min(mn, ret)
+        if len(rets) < 40:
+            continue
+        turn = sum(r.get("val", 0) for r in rows[-60:]) / min(60, len(rows))
+        if turn < min_turnover_cr:
+            continue
+        m = sum(rets) / len(rets)
+        sd = (sum((x - m) ** 2 for x in rets) / max(1, len(rets) - 1)) ** 0.5
+        yrs = len(rets) / 248
+        out.append({"sym": sym, "name": names.get(sym, sym), "price": rows[-1]["c"], "last": rows[-1]["t"], "n": len(rets),
+                    "vol": sd * 248 ** 0.5, "adr": sum(rng) / len(rng), "f5": d5 / yrs, "f10": d10 / yrs, "d5": d5, "d10": d10,
+                    "maxU": mx, "maxD": mn, "last10": last10, "turnover_cr": turn})
+    return {"rows": out, "cached_days": len(list((CACHE / "eq").glob("*.json"))), "sample_days": days}
+
+
+# ---- official market-cap ranking (AMFI half-yearly list: Large 1-100, Mid 101-250, Small 251+) ------------
+def _amfi_parse(b: bytes) -> dict:
+    import openpyxl
+    wb = openpyxl.load_workbook(io.BytesIO(b), read_only=True, data_only=True)
+    ws = wb.worksheets[0]
+    hdr, out = None, {}
+    for row in ws.iter_rows(values_only=True):
+        cells = [str(c).strip() if c is not None else "" for c in row]
+        if hdr is None:
+            low = [c.lower() for c in cells]
+            if any("nse symbol" in c for c in low):
+                hdr = low
+                ci = {"rank": next((i for i, c in enumerate(low) if c.startswith("sr")), 0),
+                      "name": next((i for i, c in enumerate(low) if "company" in c), 1),
+                      "nse": next(i for i, c in enumerate(low) if "nse symbol" in c),
+                      "avg": next((i for i, c in enumerate(low) if "average of all" in c), None),
+                      "cat": next((i for i, c in enumerate(low) if "categor" in c), None)}
+            continue
+        sym = cells[ci["nse"]] if ci["nse"] < len(cells) else ""
+        if not sym or sym.upper() in ("NA", "-", "N.A."):
+            continue
+        try:
+            mc = float(cells[ci["avg"]].replace(",", "")) if ci["avg"] is not None and cells[ci["avg"]] else None
+        except ValueError:
+            mc = None
+        try:
+            rank = int(float(cells[ci["rank"]]))
+        except ValueError:
+            rank = None
+        cat = cells[ci["cat"]].split()[0].title() if ci["cat"] is not None and cells[ci["cat"]] else None
+        out[sym.upper()] = {"rank": rank, "mcap_cr": mc, "cat": cat, "name": cells[ci["name"]]}
+    return out
+
+
+def amfi_mcap() -> dict:
+    """{NSE symbol: {rank, mcap_cr, cat}} from AMFI's 'Average Market Capitalisation' list (cached 30 days).
+    Drop the AMFI .xlsx into bridge/cache/ to use a specific edition."""
+    f = CACHE / "json" / "amfi_mcap.json"
+    if f.exists() and time.time() - f.stat().st_mtime < 30 * 86400:
+        try:
+            return json.loads(f.read_text())
+        except Exception:  # noqa: BLE001
+            pass
+    for x in sorted(CACHE.glob("*.xlsx"), key=lambda p: p.stat().st_mtime, reverse=True):
+        if "market" in x.name.lower() or "amfi" in x.name.lower():
+            try:
+                d = {"period": x.stem, "src": "local file", "rows": _amfi_parse(x.read_bytes())}
+                if len(d["rows"]) > 500:
+                    f.write_text(json.dumps(d))
+                    return d
+            except Exception as e:  # noqa: BLE001
+                log.warning("AMFI file %s: %s", x.name, e)
+    today = dt.date.today()
+    cands = []
+    for y in range(today.year, today.year - 3, -1):
+        for md in ((12, 31), (6, 30)):
+            d = dt.date(y, *md)
+            if d < today:
+                cands.append(d)
+    for d in cands[:5]:
+        for url in (f"https://www.amfiindia.com/Themes/Theme1/downloads/AverageMarketCapitalization{d:%d%b%Y}.xlsx",
+                    f"https://portal.amfiindia.com/spages/AverageMarketCapitalization{d:%d%b%Y}.xlsx"):
+            b = _get(url)
+            if b and b[:2] == b"PK":
+                try:
+                    rows = _amfi_parse(b)
+                    if len(rows) > 500:
+                        res = {"period": f"{d:%d %b %Y}", "src": url, "rows": rows}
+                        f.write_text(json.dumps(res))
+                        return res
+                except Exception as e:  # noqa: BLE001
+                    log.warning("AMFI parse %s: %s", url, e)
+    return {"period": None, "src": None, "rows": {}}
