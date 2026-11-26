@@ -96,3 +96,15 @@ function renderSearchTab() { ssMerge(); const el = $('#tab-search'); const extra
   setTimeout(() => { const i = $('#ssTabIn'); if (i && S.tab === 'search') i.focus() }, 0) }
 addTab('search', '⌕', 'Symbol Search', 'home', renderSearchTab);
 (function () { const g = GROUPS.find(g => g[0] === 'markets'); if (g && !g[3].includes('search')) g[3].splice(1, 0, 'search'); if (typeof SUBS === 'object') SUBS.search = 'Find any NSE, BSE, US or crypto symbol and add it to your watchlist' })();
+
+// ---- Company tab: a search bar on top (switch company), recent companies and prev / next through the active watchlist
+(function () { const _ra = renderAnalyze; renderAnalyze = function () { _ra.apply(this, arguments); const el = $('#tab-analyze'); if (!el || el.querySelector('.coSearch')) return;
+  const cur = S.sel; const list = (typeof wlActive === 'function' ? wlActive().syms : S.watch).filter(s => S.bySym[s]); const i = list.indexOf(cur);
+  const rec = (typeof UX === 'object' && UX.recent ? UX.recent : SX.recent).filter(s => S.bySym[s] && s !== cur).slice(0, 6);
+  const bar = document.createElement('div'); bar.className = 'coSearch';
+  bar.innerHTML = `<div class="coBox" role="button" tabindex="0" aria-label="Search another company"><span class="ssIco">⌕</span><input class="coIn" placeholder="Search another company — name or symbol (or just start typing)" readonly></div>
+   ${rec.length ? `<div class="coRec"><span class="mu">Recent</span>${rec.map(s => `<button class="chip" data-open="${esc(s)}">${esc(s)}</button>`).join('')}</div>` : ''}
+   ${list.length > 1 ? `<div class="coNav"><button class="btn s xs" data-conav="-1" ${i <= 0 ? 'disabled' : ''}>◀ Prev</button><span class="mu">${i >= 0 ? `${i + 1} / ${list.length}` : ''} in ${esc(typeof wlActive === 'function' ? wlActive().name : 'watchlist')}</span><button class="btn s xs" data-conav="1" ${i >= list.length - 1 ? 'disabled' : ''}>Next ▶</button></div>` : ''}`;
+  el.prepend(bar);
+  const box = bar.querySelector('.coBox'); box.addEventListener('mousedown', e => { e.preventDefault(); ssOpen('') }); box.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ssOpen('') } else if (/^[a-zA-Z0-9]$/.test(e.key)) { e.preventDefault(); ssOpen(e.key) } });
+  bar.querySelectorAll('[data-conav]').forEach(b => b.onclick = () => { const j = i < 0 ? 0 : i + (+b.dataset.conav); if (list[j]) openSym(list[j]) }) } })();

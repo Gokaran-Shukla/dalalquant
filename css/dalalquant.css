@@ -532,3 +532,9 @@ html[data-theme=light] .dqf-enter{background:#dcfce7;color:#166534}html[data-the
 .vlRow span{white-space:nowrap}.vlHd,.vlRow{grid-template-columns:minmax(0,1.5fr) 1fr .6fr .7fr}
 .vlCheck{display:flex;gap:8px;margin:8px 0 4px}.vlCheck input{flex:1;font-size:14px}.vlQr{font-size:13.5px;padding:4px 0;border-bottom:1px solid #18222e}
 .vlBad{background:#3a0b0b!important;border-color:#dc2626!important;color:#fecaca!important;font-size:14.5px}
+.coSearch{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.coBox{flex:1 1 380px;display:flex;align-items:center;gap:10px;background:var(--p2);border:1px solid #2e3a66;border-radius:12px;padding:10px 14px;cursor:text;box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
+.coBox:hover,.coBox:focus{border-color:var(--ac);outline:none}
+.coIn{all:unset;flex:1;font-size:16px;color:var(--tx);cursor:text;font-family:Inter,system-ui,sans-serif}.coIn::placeholder{color:var(--mu)}
+.coRec{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px}.coRec .chip{all:unset;cursor:pointer;padding:5px 12px;border-radius:999px;border:1px solid var(--ln);background:var(--p2);font-weight:600;font-size:13px}.coRec .chip:hover{border-color:var(--ac)}
+.coNav{display:flex;gap:8px;align-items:center;font-size:13px}
