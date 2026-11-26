@@ -411,3 +411,28 @@ html[data-theme=light] .cmpt thead th.chd{background:linear-gradient(180deg,colo
 #search[readonly]{cursor:text}
 @media(max-width:640px){.ssRow{grid-template-columns:30px minmax(0,1fr) 30px}.ssPx,.ssMeta{display:none}#ssDlg{padding:0}.ssBox{max-height:100vh;height:100vh;border-radius:0}}
 .ssHead input{font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}
+
+/* ---- My Radar (multiple watchlists) ---- */
+.wlWrap{display:grid;grid-template-columns:240px minmax(0,1fr);gap:12px;align-items:start}
+.wlSide{position:sticky;top:120px}
+.wlNav{display:flex;flex-direction:column;gap:2px}
+.wlItem{all:unset;cursor:pointer;display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;color:var(--mu)}
+.wlItem:hover{background:var(--p2);color:var(--tx)}.wlItem.on{background:#13243d;color:#fff}
+.wlNm{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wlCt{font-size:11px;background:var(--p3);border:1px solid var(--ln);border-radius:999px;padding:0 7px;color:var(--mu)}
+.wlDot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}.wlDot.big{width:14px;height:14px}.wlDot.sm{width:7px;height:7px;margin-right:2px;vertical-align:middle}
+.wlPre{display:flex;flex-wrap:wrap;gap:6px}.wlPre .chip{all:unset;cursor:pointer;font-size:11.5px;padding:3px 10px;border-radius:999px;border:1px dashed var(--ln);color:var(--mu)}.wlPre .chip:hover{color:var(--tx);border-color:var(--ac)}
+.wlHead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.wlTitle{all:unset;font-size:20px;font-weight:700;color:#fff;min-width:120px;max-width:340px;border-bottom:1px dashed transparent;font-family:Inter,system-ui,sans-serif}.wlTitle:hover,.wlTitle:focus{border-bottom-color:var(--ln)}
+.wlColors{display:flex;gap:4px}.wlSw{all:unset;cursor:pointer;width:14px;height:14px;border-radius:50%;opacity:.55;border:2px solid transparent}.wlSw.on,.wlSw:hover{opacity:1;border-color:#fff}
+.wlMore{position:relative}.wlMenu{display:none;position:absolute;right:0;top:110%;background:var(--p2);border:1px solid var(--ln);border-radius:10px;padding:6px;z-index:20;min-width:190px;box-shadow:0 12px 30px rgba(0,0,0,.45)}
+.wlMenu.on{display:flex;flex-direction:column}.wlMenu button{all:unset;cursor:pointer;padding:7px 10px;border-radius:6px;font-size:12.5px}.wlMenu button:hover{background:var(--p3)}
+.wlStats{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin-bottom:10px}
+.wlStats>div{background:var(--p2);border:1px solid var(--ln);border-radius:8px;padding:7px 10px;display:flex;flex-direction:column;gap:2px}.wlStats span.mu{font-size:11px}.wlStats b{font-size:13.5px}
+.wlT td{vertical-align:middle}.wlTh{cursor:pointer;user-select:none;white-space:nowrap}.wlTh:hover{color:var(--tx)}
+.wlSub{font-size:11px}.wlGrip{cursor:grab;color:var(--ln);margin-right:6px;letter-spacing:-2px}tr[draggable=true]:hover .wlGrip{color:var(--mu)}
+.wlSp{width:90px;height:26px;display:block}
+.wlNote{width:140px;background:transparent;border:1px solid transparent;color:var(--tx);border-radius:6px;padding:3px 6px;font-size:12px}.wlNote:hover,.wlNote:focus{border-color:var(--ln);background:var(--p2)}
+.wlAct{white-space:nowrap}.wlMove{font-size:11.5px;padding:2px 4px;max-width:96px}
+.wlEmpty{text-align:center;padding:36px 10px;display:flex;flex-direction:column;gap:6px;align-items:center}
+.ssListSel{margin-left:auto;display:flex;gap:6px;align-items:center}.ssListSel select{font-size:11.5px;padding:2px 6px}
+@media(max-width:900px){.wlWrap{grid-template-columns:1fr}.wlSide{position:static}}
