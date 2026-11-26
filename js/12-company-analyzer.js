@@ -9,7 +9,7 @@ function renderAnalyze(){
  const ov=S._ivov||{};
  el.innerHTML=`<div class="card hero"><div class="row" style="gap:14px;align-items:flex-end">
   <div>${star(s.sym)} <span class="hsym">${esc(s.sym)}</span> ${srcBadge(s.sym)} ${m.opp?'<span class="badge b-live">OPPORTUNITY</span>':''}<div class="sub">${esc(s.name)} · ${esc(s.sector)} · ${s.idx.map(i=>`<span class="tag">${esc(i)}</span>`).join('')}</div></div>
-  <div><span class="big">${CUR(s.sym)}${fN(m.price)}</span> <span class="n" style="font-size:14px">${m.chg>=0?'<span class=up>+':'<span class=dn>'}${fN(m.chg)}</span> ${fP(m.chgp,2)}</span></div>
+  <div><span class="big">${CUR(s.sym)}${fN(m.price)}</span> <span class="n" style="font-size:17px;font-weight:600">${m.chg>=0?'<span class=up>+':'<span class=dn>'}${fN(m.chg)}</span> ${fP(m.chgp,2)}</span></div>
   <div class="spacer"></div><div class="row"><button class="btn s xs" data-act="toEnq">Ask / dossier</button><button class="btn s xs" data-act="toIntra">Intraday</button><button class="btn s xs" data-act="toQuant">Quant forecast</button><button class="btn s xs" data-act="toInst">Institutional check</button><button class="btn s xs" data-act="toBacktest">Backtest</button><button class="btn s xs" data-act="toTicket">Trade</button><button class="btn s xs" data-act="addHold">+ Portfolio</button><button class="btn xs" data-act="report">Report</button></div></div></div>
  <div class="g2"><div class="card"><h3>Chart <span class="r row" style="text-transform:none;letter-spacing:0">${[[63,'3M'],[126,'6M'],[252,'1Y'],[504,'2Y'],[9999,'Max']].map(([v,l])=>`<button class="btn xs ${A.tf===v?'on':'s'}" data-tf="${v}">${l}</button>`).join('')}</span></h3>
   ${tfRow(A.agg||'D',s.sym)}
